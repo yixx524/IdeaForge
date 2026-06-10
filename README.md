@@ -2,6 +2,20 @@
 
 个人知识 / 想法整理工具。上传原始想法文本，由 DeepSeek 大模型智能整理为结构化信息，经用户确认后存入 PostgreSQL，并支持关键词检索。
 
+## 开发前必读（本文件）
+
+**每次开发前**，必须先完整阅读本 README.md（仅本文件，子模块 README 自行安排）。阅读完毕后，在对话或工作记录中输出：
+
+```
+易----大开工！
+```
+
+**每次开发完成后**，必须更新本 README.md 中的进度、已知问题等与本次改动相关的内容（子模块 README 自行维护）。更新完毕后，输出：
+
+```
+易----屎山完成！
+```
+
 ## 项目简介
 
 **V1 核心流程：**
@@ -17,7 +31,9 @@
 | 模块 | 状态 |
 |------|------|
 | 后端脚手架 | 已完成（`pom.xml`、`application.yml`、启动类） |
+| 后端连通 | 已完成（`/api/health`、`WebConfig` CORS、环境变量配置） |
 | 前端脚手架 | 已完成（`ideaforge-ui`，Vue 3 + Vite 8） |
+| 前后端联调 | 已完成（Vite proxy、`/api/health` 连通测试通过） |
 | 业务代码 | 待开发（Entity / Service / Controller / 页面） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
@@ -137,8 +153,7 @@ flowchart TB
 
 ### 已知问题
 
-- `IdeaForge/src/main/resources/application.yml` 中 DeepSeek API Key 存在默认值，应改为仅使用 `${DEEPSEEK_API_KEY}` 环境变量
-- `ideaforge-ui/src/App.vue` 引用了不存在的 `HelloWorld.vue` / `TheWelcome.vue`，首次开发前端时需修复
+- 无（截至前后端连通测试完成）
 
 ## 环境要求
 
@@ -151,6 +166,8 @@ flowchart TB
 ## 快速开始
 
 ### 1. 配置环境变量
+
+复制 [`.env.example`](.env.example) 为 `.env` 并填入真实值（`.env` 已 gitignore，不会提交），或手动设置：
 
 ```powershell
 $env:DEEPSEEK_API_KEY = "sk-你的密钥"
