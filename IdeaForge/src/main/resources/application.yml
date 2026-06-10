@@ -1,0 +1,20 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://192.168.226.131:5432/knowledge_db
+    username: yi_ideaforge
+    password: ${DB_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:sk-559cb3ef1ac7435b88cab8779d5468dd}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-v4-pro
+          temperature: 0.3
