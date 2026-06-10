@@ -36,6 +36,7 @@
 | 前后端联调 | 已完成（Vite proxy、全链路 API 测试通过） |
 | 后端业务 | 已完成（Entity / Repository / DTO / Service / Controller / 异常处理） |
 | 前端业务 | 已完成（vue-router、axios、`CreateIdeaView`、`SearchView`） |
+| 前端 UI | 已完成（logo 品牌色设计系统、步骤指示器、搜索卡片动效） |
 | V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
@@ -159,6 +160,7 @@ flowchart TB
 
 - JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
 - `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
+- `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
 
 ## 环境要求
 

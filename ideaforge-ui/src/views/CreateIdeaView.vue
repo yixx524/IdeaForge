@@ -1,18 +1,33 @@
 <!-- 录入想法页：两阶段流程 input（原始输入）→ review（编辑 AI 建议并保存） -->
 <template>
   <div class="page">
+    <!-- 步骤指示器 -->
+    <div class="steps">
+      <div class="step" :class="{ active: step === 'input', done: step === 'review' }">
+        <span class="step-num">1</span>
+        <span class="step-label">录入想法</span>
+      </div>
+      <div class="step-line" :class="{ done: step === 'review' }" />
+      <div class="step" :class="{ active: step === 'review' }">
+        <span class="step-num">2</span>
+        <span class="step-label">确认保存</span>
+      </div>
+    </div>
+
     <!-- 阶段一：用户输入原始标题与正文 -->
     <section v-if="step === 'input'" class="card">
-      <h2>录入想法</h2>
-      <p class="hint">输入原始标题与正文，由 AI 整理为结构化信息</p>
+      <div class="card-header">
+        <h2>录入想法</h2>
+        <p class="hint">输入原始标题与正文，由 AI 整理为结构化信息</p>
+      </div>
 
       <label class="field">
-        <span>标题（可选）</span>
-        <input v-model="original.title" type="text" placeholder="简短标题" />
+        <span class="label">标题 <em class="optional">可选</em></span>
+        <input v-model="original.title" type="text" placeholder="给想法起个简短标题…" />
       </label>
 
       <label class="field">
-        <span>正文</span>
+        <span class="label">正文</span>
         <textarea
           v-model="original.content"
           rows="8"
@@ -20,33 +35,44 @@
         />
       </label>
 
-      <button type="button" :disabled="loading" @click="handleProcess">
-        {{ loading ? 'AI 整理中…' : 'AI 整理' }}
-      </button>
+      <div class="card-footer">
+        <button type="button" class="btn-primary" :disabled="loading" @click="handleProcess">
+          <span v-if="loading" class="spinner" />
+          {{ loading ? 'AI 整理中…' : '开始 AI 整理' }}
+        </button>
+      </div>
     </section>
 
     <!-- 阶段二：展示 AI 建议，用户可编辑后确认入库 -->
     <section v-else class="card">
-      <h2>确认并保存</h2>
-      <p class="hint">可编辑 AI 建议后确认入库</p>
+      <div class="card-header">
+        <h2>确认并保存</h2>
+        <p class="hint">可编辑 AI 建议后确认入库</p>
+      </div>
+
+      <div class="ai-badge">
+        <span class="ai-dot" />
+        AI 已整理完成，请核对以下内容
+      </div>
 
       <label class="field">
-        <span>最终标题</span>
+        <span class="label">最终标题</span>
         <input v-model="finalForm.title" type="text" />
       </label>
 
       <label class="field">
-        <span>最终摘要</span>
-        <textarea v-model="finalForm.summary" rows="3" />
+        <span class="label">最终摘要</span>
+        <textarea v-model="finalForm.summary" rows="3" placeholder="一句话概括…" />
       </label>
 
       <label class="field">
-        <span>标签（逗号分隔）</span>
-        <input v-model="finalForm.tagsText" type="text" placeholder="标签1，标签2" />
+        <span class="label">标签</span>
+        <input v-model="finalForm.tagsText" type="text" placeholder="标签1，标签2，标签3" />
+        <span class="field-hint">多个标签用逗号分隔</span>
       </label>
 
       <label class="field">
-        <span>类别</span>
+        <span class="label">类别</span>
         <select v-model="finalForm.category">
           <option v-for="item in CATEGORIES" :key="item.value" :value="item.value">
             {{ item.label }}
@@ -54,18 +80,23 @@
         </select>
       </label>
 
-      <div class="actions">
-        <button type="button" class="secondary" :disabled="loading" @click="handleBack">
+      <div class="card-footer actions">
+        <button type="button" class="btn-secondary" :disabled="loading" @click="handleBack">
           返回修改
         </button>
-        <button type="button" :disabled="loading" @click="handleSave">
+        <button type="button" class="btn-primary" :disabled="loading" @click="handleSave">
+          <span v-if="loading" class="spinner" />
           {{ loading ? '保存中…' : '确认保存' }}
         </button>
       </div>
     </section>
 
-    <p v-if="error" class="message error">{{ error }}</p>
-    <p v-if="success" class="message success">{{ success }}</p>
+    <Transition name="fade">
+      <p v-if="error" class="toast error">{{ error }}</p>
+    </Transition>
+    <Transition name="fade">
+      <p v-if="success" class="toast success">{{ success }}</p>
+    </Transition>
   </div>
 </template>
 
@@ -184,87 +215,266 @@ function handleBack() {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
+/* 步骤指示器 */
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.5rem 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all var(--transition);
+}
+
+.step.active .step-num {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(26, 74, 110, 0.3);
+}
+
+.step.done .step-num {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.step.active .step-label,
+.step.done .step-label {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.step-line {
+  width: 3rem;
+  height: 2px;
+  background: var(--color-border);
+  margin: 0 0.75rem;
+  transition: background var(--transition);
+}
+
+.step-line.done {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-primary-light));
+}
+
+/* 卡片 */
 .card {
-  padding: 1.5rem;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
-.card h2 {
-  font-size: 1.125rem;
-  margin-bottom: 0.5rem;
+.card-header {
+  padding: 1.5rem 1.5rem 0;
+}
+
+.card-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 0.375rem;
 }
 
 .hint {
-  margin-bottom: 1.25rem;
-  color: #666;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.ai-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem 1.5rem 0;
+  padding: 0.625rem 1rem;
+  background: linear-gradient(135deg, rgba(26, 74, 110, 0.06), rgba(217, 160, 91, 0.1));
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  margin-bottom: 1rem;
+  padding: 0 1.5rem;
+  margin-top: 1.25rem;
   font-size: 0.875rem;
 }
 
-.field span {
-  color: #444;
-  font-weight: 500;
+.label {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.optional {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 input,
 textarea,
 select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   font-size: 0.9375rem;
-  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 textarea {
   resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
 }
 
-button {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  background: #42b883;
-  color: #fff;
-  font-size: 0.9375rem;
+select {
   cursor: pointer;
 }
 
-button.secondary {
-  background: #f0f0f0;
-  color: #333;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.card-footer {
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background: rgba(240, 244, 248, 0.5);
 }
 
 .actions {
   display: flex;
   gap: 0.75rem;
+  justify-content: flex-end;
 }
 
-.message {
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: #fff;
   font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(26, 74, 110, 0.25);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  box-shadow: 0 4px 12px rgba(26, 74, 110, 0.35);
+}
+
+.btn-secondary {
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary:not(:disabled):hover {
+  background: var(--color-bg);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 提示消息 */
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .success {
-  color: #2d8a5e;
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
 .error {
-  color: #c0392b;
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
