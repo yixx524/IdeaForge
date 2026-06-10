@@ -1,6 +1,5 @@
 package com.exam.ideaforge.repository;
 
-import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.entity.ItemStatus;
 import com.exam.ideaforge.entity.KnowledgeItem;
 import org.junit.jupiter.api.Disabled;
@@ -35,7 +34,7 @@ class KnowledgeItemRepositorySearchTest {
         item.setFinalTitle("测试标题");
         item.setFinalSummary("测试摘要");
         item.setFinalTags(new String[]{"机器学习", "AI"});
-        item.setFinalCategory(IdeaCategory.WORK);
+        item.setFinalCategory("WORK");
         item.setStatus(ItemStatus.CONFIRMED);
         repository.saveAndFlush(item);
 
@@ -47,7 +46,7 @@ class KnowledgeItemRepositorySearchTest {
                 .extracting(KnowledgeItem::getFinalTitle)
                 .contains("测试标题");
 
-        assertThat(repository.findConfirmedByCategory(IdeaCategory.WORK.name()))
+        assertThat(repository.findConfirmedByCategory("WORK"))
                 .extracting(KnowledgeItem::getFinalTitle)
                 .contains("测试标题");
     }

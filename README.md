@@ -39,6 +39,7 @@
 | 前端 UI | 已完成（logo 品牌色设计系统、步骤指示器、搜索卡片动效） |
 | V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
 | 标签/类别搜索 | 已修复（关键词与类别分离；类别用筛选下拉框） |
+| 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -47,7 +48,8 @@
 IdeaForge-v/
 ├── README.md                 # 本文件（项目总览 + 全局规范）
 ├── db/
-│   └── public.sql            # VM 数据库参考脚本
+│   ├── public.sql            # VM 数据库参考脚本
+│   └── migrate_idea_categories.sql  # 类别字典表迁移脚本
 ├── IdeaForge/                # 后端（Spring Boot）
 │   ├── README.md             # 后端专项说明
 │   └── src/main/java/com/exam/ideaforge/
@@ -162,6 +164,8 @@ flowchart TB
 - JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
 - `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
 - `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
+- 类别改由 PostgreSQL 表 `idea_categories` 维护，前端「类别管理」页可增改删（软删除）；**部署前须在 VM 执行** [`db/migrate_idea_categories.sql`](db/migrate_idea_categories.sql)（或参考 `public.sql`），否则应用启动 validate 失败
+- 类别 `code` 创建后不可修改；软删除（`enabled=false`）后管理页不再显示，历史条目保留；后期可在 DB 手动 `DELETE` 硬删
 - 类别筛选：搜索页下拉框选择类别；关键词搜索框不再匹配类别（避免「工作」误命中「正常工作」）
 - 标签搜索依赖 `final_tags` 正确入库；旧数据若 `final_tags` 为 NULL，需重新保存或手动补数据
 
@@ -187,6 +191,12 @@ $env:DB_PASSWORD = "root"   # 若数据库密码不同则修改
 ### 2. 确认数据库连通
 
 从开发机测试 VM PostgreSQL：`192.168.226.131:5432/knowledge_db`
+
+**首次部署类别字典化版本时**，请 DBA 在 VM 执行：
+
+```sql
+-- 见 db/migrate_idea_categories.sql
+```
 
 ### 3. 启动后端
 
@@ -222,6 +232,7 @@ npm run dev
 | AI 整理 | DeepSeek `deepseek-v4-pro` | 同左，可优化 Prompt |
 | 数据持久化 | PostgreSQL + JPA | 同左 |
 | 搜索 | 关键词匹配（LIKE） | pgvector 语义搜索 |
+| 类别管理 | DB 字典 + 前端 CRUD | 同左 |
 | Embedding 模型 | 不需要 | 需额外接入 |
 
 ## 相关文档
@@ -229,3 +240,4 @@ npm run dev
 - [IdeaForge/README.md](IdeaForge/README.md) — 后端包细则、配置、API 规划
 - [ideaforge-ui/README.md](ideaforge-ui/README.md) — 前端目录细则、对接约定
 - [db/public.sql](db/public.sql) — 数据库参考脚本
+- [db/migrate_idea_categories.sql](db/migrate_idea_categories.sql) — 类别字典表迁移

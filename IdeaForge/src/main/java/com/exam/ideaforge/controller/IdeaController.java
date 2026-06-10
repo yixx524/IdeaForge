@@ -4,7 +4,6 @@ import com.exam.ideaforge.dto.IdeaProcessRequest;
 import com.exam.ideaforge.dto.IdeaProcessResponse;
 import com.exam.ideaforge.dto.IdeaResponse;
 import com.exam.ideaforge.dto.IdeaSaveRequest;
-import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.service.IdeaProcessService;
 import com.exam.ideaforge.service.IdeaSearchService;
 import com.exam.ideaforge.service.IdeaService;
@@ -63,7 +62,7 @@ public class IdeaController {
     @GetMapping("/search")
     public List<IdeaResponse> search(
             @RequestParam(value = "q", required = false) String keyword,
-            @RequestParam(value = "category", required = false) IdeaCategory category) {
+            @RequestParam(value = "category", required = false) String category) {
         return searchService.search(keyword, category);
     }
 

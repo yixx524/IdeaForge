@@ -27,6 +27,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
+    @ExceptionHandler(CategoryNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryNotFound(CategoryNotFoundException ex) {
+        log.warn("类别未找到: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(CategoryValidationException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryValidation(CategoryValidationException ex) {
+        log.warn("类别校验失败: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     @ExceptionHandler(IdeaNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(IdeaNotFoundException ex) {
         log.warn("资源未找到: {}", ex.getMessage());

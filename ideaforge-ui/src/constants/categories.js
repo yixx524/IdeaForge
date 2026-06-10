@@ -1,13 +1,17 @@
-/** 类别枚举，value 与后端 IdeaCategory 一致，label 供前端展示 */
-export const CATEGORIES = [
-  { value: 'WORK', label: '工作' },
-  { value: 'STUDY', label: '学习' },
-  { value: 'LIFE', label: '生活' },
-  { value: 'INSPIRATION', label: '灵感' },
-  { value: 'TODO', label: '待办' },
-]
+/** 将后端返回的类别 code 转为中文 label */
+export function categoryLabel(code, categories = []) {
+  if (!code) return ''
+  return categories.find((item) => item.code === code)?.label ?? code
+}
 
-/** 将后端返回的类别 value 转为中文标签 */
-export function categoryLabel(value) {
-  return CATEGORIES.find((item) => item.value === value)?.label ?? value
+/** 将 API 类别列表转为下拉选项格式（兼容旧 value/label 用法） */
+export function toCategoryOptions(categories = []) {
+  return categories.map((item) => ({
+    value: item.code,
+    label: item.label,
+    code: item.code,
+    enabled: item.enabled,
+    id: item.id,
+    sortOrder: item.sortOrder,
+  }))
 }

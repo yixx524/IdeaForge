@@ -1,6 +1,5 @@
 package com.exam.ideaforge.dto;
 
-import com.exam.ideaforge.entity.IdeaCategory;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -19,6 +18,6 @@ public class IdeaResponse {
     private final String finalTitle;
     private final String finalSummary;
     private final List<String> finalTags;
-    private final IdeaCategory finalCategory;
+    private final String finalCategory;
     private final OffsetDateTime createdAt;
 }

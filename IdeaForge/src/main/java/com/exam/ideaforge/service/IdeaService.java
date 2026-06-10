@@ -19,14 +19,18 @@ import java.util.UUID;
 public class IdeaService {
 
     private final KnowledgeItemRepository repository;
+    private final CategoryService categoryService;
 
-    public IdeaService(KnowledgeItemRepository repository) {
+    public IdeaService(KnowledgeItemRepository repository, CategoryService categoryService) {
         this.repository = repository;
+        this.categoryService = categoryService;
     }
 
     /** 保存用户确认后的条目，状态设为 CONFIRMED */
     @Transactional
     public IdeaResponse save(IdeaSaveRequest request) {
+        categoryService.validateEnabledCategory(request.getFinalCategory());
+
         KnowledgeItem item = new KnowledgeItem();
         item.setOriginalTitle(request.getOriginalTitle());
         item.setOriginalContent(request.getOriginalContent().trim());
@@ -37,7 +41,7 @@ public class IdeaService {
         item.setFinalTitle(request.getFinalTitle().trim());
         item.setFinalSummary(request.getFinalSummary());
         item.setFinalTags(IdeaMapper.toTagArray(request.getFinalTags()));
-        item.setFinalCategory(request.getFinalCategory());
+        item.setFinalCategory(request.getFinalCategory().trim().toUpperCase());
         item.setStatus(ItemStatus.CONFIRMED);
 
         KnowledgeItem saved = repository.save(item);

@@ -12,7 +12,7 @@
           <span class="filter-label">类别筛选</span>
           <select v-model="category" @change="handleSearch">
             <option value="">全部类别</option>
-            <option v-for="item in CATEGORIES" :key="item.value" :value="item.value">
+            <option v-for="item in enabledCategories" :key="item.value" :value="item.value">
               {{ item.label }}
             </option>
           </select>
@@ -50,7 +50,7 @@
         <header class="result-header">
           <h3>{{ item.finalTitle }}</h3>
           <span class="badge" :class="`badge-${item.finalCategory?.toLowerCase()}`">
-            {{ categoryLabel(item.finalCategory) }}
+            {{ resolveLabel(item.finalCategory) }}
           </span>
         </header>
         <p v-if="item.finalSummary" class="summary">{{ item.finalSummary }}</p>
@@ -79,9 +79,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { searchIdeas } from '@/api/idea'
-import { CATEGORIES, categoryLabel } from '@/constants/categories'
+import { listCategories } from '@/api/category'
+import { categoryLabel, toCategoryOptions } from '@/constants/categories'
 
 const keyword = ref('')
 const category = ref('')
@@ -89,6 +90,25 @@ const loading = ref(false)
 const error = ref(null)
 const results = ref([])
 const searched = ref(false)
+const enabledCategories = ref([])
+const allCategories = ref([])
+
+onMounted(async () => {
+  try {
+    const [enabled, all] = await Promise.all([
+      listCategories(),
+      listCategories({ all: true }),
+    ])
+    enabledCategories.value = toCategoryOptions(enabled)
+    allCategories.value = toCategoryOptions(all)
+  } catch (e) {
+    error.value = e.message
+  }
+})
+
+function resolveLabel(code) {
+  return categoryLabel(code, allCategories.value)
+}
 
 /** 调用 GET /api/ideas/search?q=&category= 检索 */
 async function handleSearch() {

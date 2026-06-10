@@ -1,6 +1,5 @@
 package com.exam.ideaforge.dto;
 
-import com.exam.ideaforge.entity.IdeaCategory;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -14,5 +13,5 @@ public class IdeaProcessResponse {
     private final String suggestedTitle;
     private final String suggestedSummary;
     private final List<String> suggestedTags;
-    private final IdeaCategory suggestedCategory;
+    private final String suggestedCategory;
 }

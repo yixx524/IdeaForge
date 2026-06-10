@@ -32,7 +32,8 @@ ideaforge-ui/
     ├── api/                 # 后端 HTTP 封装
     │   ├── http.js          # axios 实例
     │   ├── health.js        # 健康检查
-    │   └── idea.js          # 想法相关接口
+    │   ├── idea.js          # 想法相关接口
+    │   └── category.js      # 类别字典接口
     ├── router/              # 路由定义
     ├── views/               # 页面级组件
     ├── constants/           # 共享常量（类别枚举等）
@@ -45,6 +46,7 @@ ideaforge-ui/
 |------|------|------|
 | `/` | `views/CreateIdeaView.vue` | 输入原始文本 → AI 整理 → 编辑 → 保存 |
 | `/search` | `views/SearchView.vue` | 关键词搜索 + 结果列表 |
+| `/settings/categories` | `views/CategoryManageView.vue` | 类别字典增改删（软删除） |
 
 ## 各目录职责
 
@@ -107,6 +109,11 @@ server: {
 | `api/idea.js → processIdea()` | `POST /api/ideas/process` | AI 整理 |
 | `api/idea.js → saveIdea()` | `POST /api/ideas` | 保存 |
 | `api/idea.js → searchIdeas({ q, category })` | `GET /api/ideas/search?q=&category=` | 搜索 + 类别筛选 |
+| `api/category.js → listCategories()` | `GET /api/categories` | 获取 enabled 类别 |
+| `api/category.js → listCategories({ all: true })` | `GET /api/categories?all=true` | 含已软删除类别（搜索页 label） |
+| `api/category.js → createCategory()` | `POST /api/categories` | 新增类别 |
+| `api/category.js → updateCategory()` | `PUT /api/categories/{id}` | 更新类别 |
+| `api/category.js → deleteCategory()` | `DELETE /api/categories/{id}` | 软删除 |
 
 ## 相关文档
 

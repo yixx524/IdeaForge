@@ -74,7 +74,7 @@
       <label class="field">
         <span class="label">类别</span>
         <select v-model="finalForm.category">
-          <option v-for="item in CATEGORIES" :key="item.value" :value="item.value">
+          <option v-for="item in categories" :key="item.value" :value="item.value">
             {{ item.label }}
           </option>
         </select>
@@ -101,15 +101,17 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { processIdea, saveIdea } from '@/api/idea'
-import { CATEGORIES } from '@/constants/categories'
+import { listCategories } from '@/api/category'
+import { toCategoryOptions } from '@/constants/categories'
 
 /** 当前步骤：input 录入 | review 确认 */
 const step = ref('input')
 const loading = ref(false)
 const error = ref(null)
 const success = ref(null)
+const categories = ref([])
 
 /** 用户原始输入 */
 const original = reactive({
@@ -122,7 +124,7 @@ const suggestion = reactive({
   suggestedTitle: '',
   suggestedSummary: '',
   suggestedTags: [],
-  suggestedCategory: 'INSPIRATION',
+  suggestedCategory: '',
 })
 
 /** 用户编辑后的最终字段（tagsText 为逗号分隔字符串，提交前转为数组） */
@@ -130,7 +132,19 @@ const finalForm = reactive({
   title: '',
   summary: '',
   tagsText: '',
-  category: 'INSPIRATION',
+  category: '',
+})
+
+onMounted(async () => {
+  try {
+    categories.value = toCategoryOptions(await listCategories())
+    if (categories.value.length && !finalForm.category) {
+      const defaultCat = categories.value.find((c) => c.value === 'INSPIRATION') ?? categories.value[0]
+      finalForm.category = defaultCat.value
+    }
+  } catch (e) {
+    error.value = e.message
+  }
 })
 
 /** 将逗号分隔的标签文本转为数组 */
@@ -160,7 +174,7 @@ async function handleProcess() {
     finalForm.title = result.suggestedTitle ?? ''
     finalForm.summary = result.suggestedSummary ?? ''
     finalForm.tagsText = (result.suggestedTags ?? []).join('，')
-    finalForm.category = result.suggestedCategory ?? 'INSPIRATION'
+    finalForm.category = result.suggestedCategory ?? finalForm.category ?? categories.value[0]?.value ?? ''
     step.value = 'review'
   } catch (e) {
     error.value = e.message

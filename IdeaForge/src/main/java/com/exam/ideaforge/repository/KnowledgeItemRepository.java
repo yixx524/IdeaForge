@@ -1,6 +1,5 @@
 package com.exam.ideaforge.repository;
 
-import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.entity.KnowledgeItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

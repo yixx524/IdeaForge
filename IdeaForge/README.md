@@ -19,11 +19,11 @@ Spring Boot 后端模块，负责 REST API、DeepSeek AI 整理、PostgreSQL 持
 ```
 src/main/java/com/exam/ideaforge/
 ├── IdeaForgeApplication.java    # 启动类
-├── entity/                      # KnowledgeItem、IdeaCategory、ItemStatus
-├── repository/                  # KnowledgeItemRepository
+├── entity/                      # KnowledgeItem、IdeaCategoryEntity、ItemStatus
+├── repository/                  # KnowledgeItemRepository、IdeaCategoryRepository
 ├── dto/                         # 请求 / 响应 DTO
-├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService
-├── controller/                  # HealthController、IdeaController
+├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService
+├── controller/                  # HealthController、IdeaController、CategoryController
 ├── config/                      # WebConfig（CORS）
 └── exception/                   # GlobalExceptionHandler
 ```
@@ -103,15 +103,26 @@ cd IdeaForge
 | GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 可选类别筛选（`category=WORK` 等） | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
 
+### 类别字典 API
+
+| 方法 | 路径 | 说明 | 状态 |
+|------|------|------|------|
+| GET | `/api/categories` | 列出未删除类别；`?all=true` 含已软删除 | 已完成 |
+| POST | `/api/categories` | 新增 `{ code, label, sortOrder? }` | 已完成 |
+| PUT | `/api/categories/{id}` | 更新 label / sortOrder / enabled | 已完成 |
+| DELETE | `/api/categories/{id}` | 软删除（enabled=false） | 已完成 |
+
 ### 两阶段流程
 
 1. `POST /api/ideas/process` — AI 推理，结果返回前端，暂不入库
 2. 用户在前端编辑确认
 3. `POST /api/ideas` — 一次性保存至 PostgreSQL
 
-### 类别枚举
+### 类别字典
 
-`WORK`（工作）/ `STUDY`（学习）/ `LIFE`（生活）/ `INSPIRATION`（灵感）/ `TODO`（待办）
+想法类别存储于 `idea_categories` 表（`code` + `label` + `enabled`），不再使用 Java 枚举。AI Prompt 动态读取 enabled 类别列表。保存想法时 `finalCategory` 必须是 enabled 的 code。
+
+种子数据：`WORK` / `STUDY` / `LIFE` / `INSPIRATION` / `TODO`（见 [`db/migrate_idea_categories.sql`](../db/migrate_idea_categories.sql)）
 
 ## 开发顺序建议
 

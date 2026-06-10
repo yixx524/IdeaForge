@@ -18,6 +18,10 @@
           <span class="nav-icon">⌕</span>
           搜索知识
         </RouterLink>
+        <RouterLink to="/settings/categories" class="nav-link">
+          <span class="nav-icon">⚙</span>
+          类别管理
+        </RouterLink>
       </nav>
     </header>
 

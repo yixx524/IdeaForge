@@ -3,10 +3,11 @@ package com.exam.ideaforge.service;
 import com.exam.ideaforge.dto.AiSuggestionResult;
 import com.exam.ideaforge.dto.IdeaProcessRequest;
 import com.exam.ideaforge.dto.IdeaProcessResponse;
-import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.exception.IdeaProcessingException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * AI 整理服务：调用 DeepSeek 将原始想法转为结构化建议。
@@ -15,27 +16,34 @@ import org.springframework.stereotype.Service;
 @Service
 public class IdeaProcessService {
 
-    /** 约束 AI 输出格式：标题、摘要、标签、类别 */
-    private static final String SYSTEM_PROMPT = """
+    private static final String SYSTEM_PROMPT_TEMPLATE = """
             你是个人知识整理助手。根据用户提供的原始想法，生成结构化建议。
-            类别必须是以下之一：WORK、STUDY、LIFE、INSPIRATION、TODO。
+            类别必须是以下 code 之一：%s。
             标签 3-5 个，简洁中文。摘要一句话，不超过 80 字。标题简洁有力。
             """;
 
     private final ChatClient chatClient;
+    private final CategoryService categoryService;
 
-    public IdeaProcessService(ChatClient.Builder chatClientBuilder) {
+    public IdeaProcessService(ChatClient.Builder chatClientBuilder, CategoryService categoryService) {
         this.chatClient = chatClientBuilder.build();
+        this.categoryService = categoryService;
     }
 
     /** 调用 DeepSeek，将 AI 响应反序列化为 AiSuggestionResult 后转为 IdeaProcessResponse */
     public IdeaProcessResponse process(IdeaProcessRequest request) {
+        List<String> enabledCodes = categoryService.getEnabledCodes();
+        if (enabledCodes.isEmpty()) {
+            throw new IdeaProcessingException("没有可用的类别，请先在类别管理中新增");
+        }
+
+        String systemPrompt = SYSTEM_PROMPT_TEMPLATE.formatted(String.join("、", enabledCodes));
         String userPrompt = buildUserPrompt(request);
 
         AiSuggestionResult result;
         try {
             result = chatClient.prompt()
-                    .system(SYSTEM_PROMPT)
+                    .system(systemPrompt)
                     .user(userPrompt)
                     .call()
                     .entity(AiSuggestionResult.class);
@@ -47,11 +55,13 @@ public class IdeaProcessService {
             throw new IdeaProcessingException("AI 返回结果无效，请重试");
         }
 
+        String resolvedCategory = categoryService.resolveCategoryCode(result.suggestedCategory());
+
         return IdeaProcessResponse.builder()
                 .suggestedTitle(result.suggestedTitle().trim())
                 .suggestedSummary(result.suggestedSummary() != null ? result.suggestedSummary().trim() : "")
-                .suggestedTags(result.suggestedTags() != null ? result.suggestedTags() : java.util.List.of())
-                .suggestedCategory(parseCategory(result.suggestedCategory()))
+                .suggestedTags(result.suggestedTags() != null ? result.suggestedTags() : List.of())
+                .suggestedCategory(resolvedCategory)
                 .build();
     }
 
@@ -62,16 +72,5 @@ public class IdeaProcessService {
         }
         prompt.append("正文：").append(request.getOriginalContent().trim());
         return prompt.toString();
-    }
-
-    private IdeaCategory parseCategory(String category) {
-        if (category == null || category.isBlank()) {
-            return IdeaCategory.INSPIRATION;
-        }
-        try {
-            return IdeaCategory.valueOf(category.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            return IdeaCategory.INSPIRATION;
-        }
     }
 }

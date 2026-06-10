@@ -1,7 +1,6 @@
 package com.exam.ideaforge.service;
 
 import com.exam.ideaforge.dto.IdeaResponse;
-import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.entity.KnowledgeItem;
 import com.exam.ideaforge.repository.KnowledgeItemRepository;
 import org.springframework.stereotype.Service;
@@ -23,9 +22,9 @@ public class IdeaSearchService {
     }
 
     @Transactional(readOnly = true)
-    public List<IdeaResponse> search(String keyword, IdeaCategory category) {
+    public List<IdeaResponse> search(String keyword, String category) {
         boolean hasKeyword = keyword != null && !keyword.isBlank();
-        boolean hasCategory = category != null;
+        boolean hasCategory = category != null && !category.isBlank();
 
         if (!hasKeyword && !hasCategory) {
             return List.of();
@@ -33,12 +32,13 @@ public class IdeaSearchService {
 
         List<KnowledgeItem> items;
         if (hasKeyword && hasCategory) {
-            String trimmed = keyword.trim();
-            items = repository.searchByKeyword(trimmed).stream()
-                    .filter(item -> item.getFinalCategory() == category)
+            String trimmedKeyword = keyword.trim();
+            String normalizedCategory = category.trim().toUpperCase();
+            items = repository.searchByKeyword(trimmedKeyword).stream()
+                    .filter(item -> normalizedCategory.equals(item.getFinalCategory()))
                     .toList();
         } else if (hasCategory) {
-            items = repository.findConfirmedByCategory(category.name());
+            items = repository.findConfirmedByCategory(category.trim().toUpperCase());
         } else {
             items = repository.searchByKeyword(keyword.trim());
         }

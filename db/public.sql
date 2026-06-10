@@ -12,7 +12,7 @@
  Target Server Version : 160014 (160014)
  File Encoding         : 65001
 
- Date: 10/06/2026 14:08:04
+ Date: 10/06/2026 17:03:50
 */
 
 
@@ -65,6 +65,39 @@ CREATE TYPE "public"."vector" (
 );
 
 -- ----------------------------
+-- Table structure for idea_categories
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."idea_categories";
+CREATE TABLE "public"."idea_categories" (
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "code" varchar(20) COLLATE "pg_catalog"."default" NOT NULL,
+  "label" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
+  "sort_order" int4 NOT NULL DEFAULT 0,
+  "enabled" bool NOT NULL DEFAULT true,
+  "created_at" timestamptz(6) DEFAULT now(),
+  "updated_at" timestamptz(6) DEFAULT now()
+)
+;
+COMMENT ON COLUMN "public"."idea_categories"."id" IS '主键 UUID';
+COMMENT ON COLUMN "public"."idea_categories"."code" IS '稳定机器码，写入 knowledge_items.final_category';
+COMMENT ON COLUMN "public"."idea_categories"."label" IS '中文展示名，可修改';
+COMMENT ON COLUMN "public"."idea_categories"."sort_order" IS '下拉排序';
+COMMENT ON COLUMN "public"."idea_categories"."enabled" IS 'false=软停用，历史数据保留';
+COMMENT ON COLUMN "public"."idea_categories"."created_at" IS '创建时间';
+COMMENT ON COLUMN "public"."idea_categories"."updated_at" IS '最后更新时间';
+COMMENT ON TABLE "public"."idea_categories" IS '想法类别字典，供前端动态维护';
+
+-- ----------------------------
+-- Records of idea_categories
+-- ----------------------------
+INSERT INTO "public"."idea_categories" VALUES ('cd68dd44-6463-4998-a05f-2d859f5f9ee0', 'WORK', '工作', 1, 't', '2026-06-10 08:53:27.173678+00', '2026-06-10 08:53:27.173678+00');
+INSERT INTO "public"."idea_categories" VALUES ('9d894939-cbe7-420a-89bf-77a4eb911c31', 'STUDY', '学习', 2, 't', '2026-06-10 08:53:27.173678+00', '2026-06-10 08:53:27.173678+00');
+INSERT INTO "public"."idea_categories" VALUES ('ada42ddd-338c-4159-9973-26ec3ee8ab83', 'LIFE', '生活', 3, 't', '2026-06-10 08:53:27.173678+00', '2026-06-10 08:53:27.173678+00');
+INSERT INTO "public"."idea_categories" VALUES ('238ca83b-35c6-4d23-8e3b-68b7a668140b', 'INSPIRATION', '灵感', 4, 't', '2026-06-10 08:53:27.173678+00', '2026-06-10 08:53:27.173678+00');
+INSERT INTO "public"."idea_categories" VALUES ('06e7bffc-9d5c-4735-a5f4-5dca4f68a317', 'TODO', '待办', 5, 't', '2026-06-10 08:53:27.173678+00', '2026-06-10 08:53:27.173678+00');
+INSERT INTO "public"."idea_categories" VALUES ('13fb5835-c088-4ef4-b298-23acec9bae0a', 'CESHI', '测试', 0, 'f', '2026-06-10 08:56:53.129797+00', '2026-06-10 09:02:31.700122+00');
+
+-- ----------------------------
 -- Table structure for knowledge_items
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."knowledge_items";
@@ -105,6 +138,9 @@ COMMENT ON TABLE "public"."knowledge_items" IS '用户知识条目：原始想�
 -- ----------------------------
 -- Records of knowledge_items
 -- ----------------------------
+INSERT INTO "public"."knowledge_items" VALUES ('c776ea27-485d-4957-adcd-3d27f5056de9', '测试想法', '今天学习了 Spring AI 与 DeepSeek 的集成方式', 'Spring AI 集成', '学习 Spring AI', '{"Spring AI",DeepSeek}', 'STUDY', 'Spring AI 与 DeepSeek 集成学习', '学习如何将 Spring AI 与 DeepSeek 结合', '{"Spring AI",DeepSeek,笔记整理}', 'STUDY', 'confirmed', NULL, '2026-06-10 07:35:16.752387+00', '2026-06-10 07:35:16.752387+00');
+INSERT INTO "public"."knowledge_items" VALUES ('03e1d4c2-838e-49ba-82a3-f8e9ef0e2fab', '第一次测试', '2026.6.10.15.44完成第一次开发，进行第一次测试', '首次开发测试记录', '2026年6月10日15:44完成首次开发并进行初次测试', '{开发,测试,版本记录,里程碑}', 'WORK', '首次开发测试记录', '2026年6月10日15:44完成首次开发并进行初次测试', '{开发,测试,版本记录,里程碑}', 'WORK', 'confirmed', NULL, '2026-06-10 07:45:14.34944+00', '2026-06-10 07:45:14.34944+00');
+INSERT INTO "public"."knowledge_items" VALUES ('59b316e6-adeb-49c5-86de-43e432816372', '测试1', '测试测试测试，测试标签搜索是否正常', '测试标签搜索', '测试标签搜索功能是否正常工作。', '{测试,标签,搜索,功能验证}', 'TODO', '测试标签搜索', '测试标签搜索功能是否正常工作。', '{测试,标签,搜索,功能验证}', 'TODO', 'confirmed', NULL, '2026-06-10 08:17:19.805971+00', '2026-06-10 08:17:19.805971+00');
 
 -- ----------------------------
 -- Function structure for array_to_halfvec
@@ -1235,6 +1271,29 @@ CREATE FUNCTION "public"."vector_typmod_in"(_cstring)
   RETURNS "pg_catalog"."int4" AS '$libdir/vector', 'vector_typmod_in'
   LANGUAGE c IMMUTABLE STRICT
   COST 1;
+
+-- ----------------------------
+-- Indexes structure for table idea_categories
+-- ----------------------------
+CREATE UNIQUE INDEX "idx_idea_categories_code" ON "public"."idea_categories" USING btree (
+  "code" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_idea_categories_enabled_sort" ON "public"."idea_categories" USING btree (
+  "enabled" "pg_catalog"."bool_ops" ASC NULLS LAST,
+  "sort_order" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Triggers structure for table idea_categories
+-- ----------------------------
+CREATE TRIGGER "trigger_idea_categories_updated_at" BEFORE UPDATE ON "public"."idea_categories"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."update_updated_at_column"();
+
+-- ----------------------------
+-- Primary Key structure for table idea_categories
+-- ----------------------------
+ALTER TABLE "public"."idea_categories" ADD CONSTRAINT "idea_categories_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table knowledge_items

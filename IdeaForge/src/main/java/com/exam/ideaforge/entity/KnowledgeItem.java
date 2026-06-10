@@ -3,8 +3,6 @@ package com.exam.ideaforge.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -53,9 +51,8 @@ public class KnowledgeItem {
     @Column(name = "suggested_tags", columnDefinition = "text[]")
     private String[] suggestedTags = new String[0];
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "suggested_category", length = 20)
-    private IdeaCategory suggestedCategory;
+    private String suggestedCategory;
 
     // --- 用户确认后的最终字段（搜索与展示使用这组数据） ---
     @Column(name = "final_title", nullable = false)
@@ -68,9 +65,8 @@ public class KnowledgeItem {
     @Column(name = "final_tags", columnDefinition = "text[]")
     private String[] finalTags = new String[0];
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "final_category", nullable = false, length = 20)
-    private IdeaCategory finalCategory;
+    private String finalCategory;
 
     /** 数据库存小写值（pending/confirmed），由 ItemStatusConverter 转换 */
     @Convert(converter = ItemStatusConverter.class)

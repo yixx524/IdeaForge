@@ -1,6 +1,5 @@
 package com.exam.ideaforge.dto;
 
-import com.exam.ideaforge.entity.IdeaCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -21,7 +20,7 @@ public class IdeaSaveRequest {
     private String suggestedTitle;
     private String suggestedSummary;
     private List<String> suggestedTags;
-    private IdeaCategory suggestedCategory;
+    private String suggestedCategory;
 
     @NotBlank(message = "最终标题不能为空")
     private String finalTitle;
@@ -31,5 +30,5 @@ public class IdeaSaveRequest {
     private List<String> finalTags;
 
     @NotNull(message = "最终类别不能为空")
-    private IdeaCategory finalCategory;
+    private String finalCategory;
 }
