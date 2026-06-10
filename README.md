@@ -33,8 +33,10 @@
 | 后端脚手架 | 已完成（`pom.xml`、`application.yml`、启动类） |
 | 后端连通 | 已完成（`/api/health`、`WebConfig` CORS、环境变量配置） |
 | 前端脚手架 | 已完成（`ideaforge-ui`，Vue 3 + Vite 8） |
-| 前后端联调 | 已完成（Vite proxy、`/api/health` 连通测试通过） |
-| 业务代码 | 待开发（Entity / Service / Controller / 页面） |
+| 前后端联调 | 已完成（Vite proxy、全链路 API 测试通过） |
+| 后端业务 | 已完成（Entity / Repository / DTO / Service / Controller / 异常处理） |
+| 前端业务 | 已完成（vue-router、axios、`CreateIdeaView`、`SearchView`） |
+| V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -64,7 +66,9 @@ IdeaForge-v/
 | 前端 | Vue 3 + Vite | ^3.5 / ^8.0（JavaScript） |
 | 向量检索（V2） | pgvector | V1 暂不启用，使用关键词搜索 |
 
-**前端规划依赖（待安装，新增须评审）：** vue-router、axios、Element Plus
+**前端已安装依赖：** vue-router、axios
+
+**前端规划依赖（待安装，新增须评审）：** Element Plus
 
 ## 系统架构（V1）
 
@@ -153,7 +157,8 @@ flowchart TB
 
 ### 已知问题
 
-- 无（截至前后端连通测试完成）
+- JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
+- `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
 
 ## 环境要求
 

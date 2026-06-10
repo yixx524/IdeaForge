@@ -19,13 +19,13 @@ Spring Boot 后端模块，负责 REST API、DeepSeek AI 整理、PostgreSQL 持
 ```
 src/main/java/com/exam/ideaforge/
 ├── IdeaForgeApplication.java    # 启动类
-├── entity/                      # 待建 — 数据库实体
-├── repository/                  # 待建 — 数据访问层
-├── dto/                         # 待建 — API 入参 / 出参
-├── service/                     # 待建 — 业务逻辑
-├── controller/                  # 待建 — REST 接口
-├── config/                      # 待建 — Spring 配置（CORS 等）
-└── exception/                   # 待建 — 异常处理
+├── entity/                      # KnowledgeItem、IdeaCategory、ItemStatus
+├── repository/                  # KnowledgeItemRepository
+├── dto/                         # 请求 / 响应 DTO
+├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService
+├── controller/                  # HealthController、IdeaController
+├── config/                      # WebConfig（CORS）
+└── exception/                   # GlobalExceptionHandler
 ```
 
 ## 各包职责与开发规则
@@ -71,7 +71,7 @@ controller → service → repository → entity
 | `server.port` | 8080 |
 | `spring.datasource.url` | PostgreSQL 连接（VM `192.168.226.131:5432/knowledge_db`） |
 | `spring.datasource.password` | `${DB_PASSWORD:root}` |
-| `spring.jpa.hibernate.ddl-auto` | `update`（开发阶段自动建表） |
+| `spring.jpa.hibernate.ddl-auto` | `validate`（表由 VM 维护，应用无 ALTER 权限） |
 | `spring.ai.deepseek.api-key` | `${DEEPSEEK_API_KEY}`（须通过环境变量注入） |
 | `spring.ai.deepseek.chat.options.model` | `deepseek-v4-pro` |
 | `spring.ai.deepseek.chat.options.temperature` | `0.3` |
@@ -98,10 +98,10 @@ cd IdeaForge
 
 | 方法 | 路径 | 说明 | 状态 |
 |------|------|------|------|
-| POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 待实现 |
-| POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 待实现 |
-| GET | `/api/ideas/search?q=` | 关键词搜索（title / summary / tags / content） | 待实现 |
-| GET | `/api/ideas/{id}` | 查看单条详情 | 待实现（可选） |
+| POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成 |
+| POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
+| GET | `/api/ideas/search?q=` | 关键词搜索（title / summary / tags / content） | 已完成 |
+| GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
 
 ### 两阶段流程
 

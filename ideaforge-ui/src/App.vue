@@ -1,64 +1,45 @@
-<script setup>
-import { ref } from 'vue'
-import { checkHealth } from '@/api/health'
-
-const status = ref('idle')
-const result = ref(null)
-const error = ref(null)
-
-async function testConnection() {
-  status.value = 'loading'
-  result.value = null
-  error.value = null
-
-  try {
-    result.value = await checkHealth()
-    status.value = 'success'
-  } catch (e) {
-    error.value = e.message ?? '连接失败'
-    status.value = 'error'
-  }
-}
-</script>
-
+<!-- 根布局壳：顶部导航 + 路由出口，不含具体页面业务 -->
 <template>
   <div class="app">
     <header class="header">
-      <h1>IdeaForge</h1>
-      <p class="subtitle">个人知识 / 想法整理工具</p>
+      <div class="brand">
+        <h1>IdeaForge</h1>
+        <p class="subtitle">个人知识 / 想法整理工具</p>
+      </div>
+      <nav class="nav">
+        <RouterLink to="/">录入想法</RouterLink>
+        <RouterLink to="/search">搜索知识</RouterLink>
+      </nav>
     </header>
 
+    <!-- 根据路由渲染 CreateIdeaView 或 SearchView -->
     <main class="main">
-      <section class="card">
-        <h2>前后端连通测试</h2>
-        <p class="hint">点击按钮，通过 Vite 代理请求后端 <code>/api/health</code></p>
-        <button type="button" :disabled="status === 'loading'" @click="testConnection">
-          {{ status === 'loading' ? '检测中…' : '测试连接' }}
-        </button>
-
-        <p v-if="status === 'success'" class="message success">
-          连接成功：{{ result?.service }} — {{ result?.status }}
-        </p>
-        <p v-if="status === 'error'" class="message error">
-          连接失败：{{ error }}
-        </p>
-      </section>
+      <RouterView />
     </main>
   </div>
 </template>
 
+<script setup>
+import { RouterLink, RouterView } from 'vue-router'
+</script>
+
 <style scoped>
 .app {
-  max-width: 640px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
 .header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
 }
 
-.header h1 {
+.brand h1 {
   font-size: 1.75rem;
   font-weight: 600;
 }
@@ -68,55 +49,26 @@ async function testConnection() {
   color: #666;
 }
 
-.card {
-  padding: 1.5rem;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+.nav {
+  display: flex;
+  gap: 1rem;
 }
 
-.card h2 {
-  font-size: 1.125rem;
-  margin-bottom: 0.75rem;
-}
-
-.hint {
-  margin-bottom: 1rem;
+.nav a {
   color: #666;
-  font-size: 0.875rem;
-}
-
-code {
-  padding: 0.125rem 0.375rem;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-button {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  background: #42b883;
-  color: #fff;
+  text-decoration: none;
   font-size: 0.9375rem;
-  cursor: pointer;
+  padding-bottom: 0.125rem;
+  border-bottom: 2px solid transparent;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.nav a:hover {
+  color: #42b883;
 }
 
-.message {
-  margin-top: 1rem;
-  font-size: 0.9375rem;
-}
-
-.success {
-  color: #2d8a5e;
-}
-
-.error {
-  color: #c0392b;
+.nav a.router-link-active {
+  color: #42b883;
+  border-bottom-color: #42b883;
+  font-weight: 500;
 }
 </style>
