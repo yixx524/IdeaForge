@@ -106,7 +106,7 @@ server: {
 |----------|----------|------|
 | `api/idea.js → processIdea()` | `POST /api/ideas/process` | AI 整理 |
 | `api/idea.js → saveIdea()` | `POST /api/ideas` | 保存 |
-| `api/idea.js → searchIdeas(q)` | `GET /api/ideas/search?q=` | 搜索 |
+| `api/idea.js → searchIdeas({ q, category })` | `GET /api/ideas/search?q=&category=` | 搜索 + 类别筛选 |
 
 ## 相关文档
 

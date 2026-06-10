@@ -38,6 +38,7 @@
 | 前端业务 | 已完成（vue-router、axios、`CreateIdeaView`、`SearchView`） |
 | 前端 UI | 已完成（logo 品牌色设计系统、步骤指示器、搜索卡片动效） |
 | V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
+| 标签/类别搜索 | 已修复（关键词与类别分离；类别用筛选下拉框） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -161,6 +162,8 @@ flowchart TB
 - JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
 - `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
 - `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
+- 类别筛选：搜索页下拉框选择类别；关键词搜索框不再匹配类别（避免「工作」误命中「正常工作」）
+- 标签搜索依赖 `final_tags` 正确入库；旧数据若 `final_tags` 为 NULL，需重新保存或手动补数据
 
 ## 环境要求
 

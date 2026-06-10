@@ -4,7 +4,19 @@
     <section class="card search-card">
       <div class="card-header">
         <h2>搜索知识</h2>
-        <p class="hint">按标题、摘要、正文或标签关键词检索</p>
+        <p class="hint">关键词搜索标题、摘要、正文、标签；类别请使用下方筛选</p>
+      </div>
+
+      <div class="filters">
+        <label class="filter-field">
+          <span class="filter-label">类别筛选</span>
+          <select v-model="category" @change="handleSearch">
+            <option value="">全部类别</option>
+            <option v-for="item in CATEGORIES" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+        </label>
       </div>
 
       <div class="search-bar">
@@ -61,7 +73,7 @@
 
     <!-- 初始引导 -->
     <div v-else-if="!loading && !searched && !error" class="welcome-state">
-      <p>输入关键词开始检索你的知识库</p>
+      <p>输入关键词或选择类别开始检索你的知识库</p>
     </div>
   </div>
 </template>
@@ -69,18 +81,22 @@
 <script setup>
 import { ref } from 'vue'
 import { searchIdeas } from '@/api/idea'
-import { categoryLabel } from '@/constants/categories'
+import { CATEGORIES, categoryLabel } from '@/constants/categories'
 
 const keyword = ref('')
+const category = ref('')
 const loading = ref(false)
 const error = ref(null)
 const results = ref([])
 const searched = ref(false)
 
-/** 调用 GET /api/ideas/search?q= 检索 */
+/** 调用 GET /api/ideas/search?q=&category= 检索 */
 async function handleSearch() {
-  if (!keyword.value.trim()) {
-    error.value = '请输入搜索关键词'
+  const q = keyword.value.trim()
+  const cat = category.value
+
+  if (!q && !cat) {
+    error.value = '请输入关键词或选择类别'
     results.value = []
     searched.value = false
     return
@@ -90,7 +106,7 @@ async function handleSearch() {
   error.value = null
 
   try {
-    results.value = await searchIdeas(keyword.value.trim())
+    results.value = await searchIdeas({ q: q || undefined, category: cat || undefined })
     searched.value = true
   } catch (e) {
     error.value = e.message
@@ -137,10 +153,36 @@ function formatDate(value) {
   font-size: 0.875rem;
 }
 
+.filters {
+  padding: 0 1.5rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.filter-label {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.filter-field select {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
 .search-card .search-bar {
   display: flex;
   gap: 0.75rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1rem 1.5rem 1.5rem;
 }
 
 .search-input-wrap {

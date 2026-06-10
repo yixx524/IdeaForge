@@ -12,8 +12,14 @@ export async function saveIdea(payload) {
   return data
 }
 
-/** 关键词搜索已确认的知识条目 */
-export async function searchIdeas(keyword) {
-  const { data } = await http.get('/ideas/search', { params: { q: keyword } })
+/**
+ * 搜索已确认的知识条目
+ * @param {{ q?: string, category?: string }} params - q 关键词；category 类别枚举值（WORK 等）
+ */
+export async function searchIdeas({ q, category } = {}) {
+  const params = {}
+  if (q?.trim()) params.q = q.trim()
+  if (category) params.category = category
+  const { data } = await http.get('/ideas/search', { params })
   return data
 }

@@ -100,7 +100,7 @@ cd IdeaForge
 |------|------|------|------|
 | POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成 |
 | POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
-| GET | `/api/ideas/search?q=` | 关键词搜索（title / summary / tags / content） | 已完成 |
+| GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 可选类别筛选（`category=WORK` 等） | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
 
 ### 两阶段流程

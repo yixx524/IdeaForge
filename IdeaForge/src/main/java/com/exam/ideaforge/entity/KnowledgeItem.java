@@ -51,7 +51,7 @@ public class KnowledgeItem {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "suggested_tags", columnDefinition = "text[]")
-    private String[] suggestedTags;
+    private String[] suggestedTags = new String[0];
 
     @Enumerated(EnumType.STRING)
     @Column(name = "suggested_category", length = 20)
@@ -66,7 +66,7 @@ public class KnowledgeItem {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "final_tags", columnDefinition = "text[]")
-    private String[] finalTags;
+    private String[] finalTags = new String[0];
 
     @Enumerated(EnumType.STRING)
     @Column(name = "final_category", nullable = false, length = 20)

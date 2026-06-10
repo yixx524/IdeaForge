@@ -4,6 +4,7 @@ import com.exam.ideaforge.dto.IdeaProcessRequest;
 import com.exam.ideaforge.dto.IdeaProcessResponse;
 import com.exam.ideaforge.dto.IdeaResponse;
 import com.exam.ideaforge.dto.IdeaSaveRequest;
+import com.exam.ideaforge.entity.IdeaCategory;
 import com.exam.ideaforge.service.IdeaProcessService;
 import com.exam.ideaforge.service.IdeaSearchService;
 import com.exam.ideaforge.service.IdeaService;
@@ -55,10 +56,15 @@ public class IdeaController {
         return ideaService.save(request);
     }
 
-    /** 关键词搜索已确认条目 */
+    /**
+     * 搜索已确认条目。
+     * q：关键词（标题/摘要/正文/标签）；category：类别筛选（WORK 等），可与 q 组合。
+     */
     @GetMapping("/search")
-    public List<IdeaResponse> search(@RequestParam("q") String keyword) {
-        return searchService.search(keyword);
+    public List<IdeaResponse> search(
+            @RequestParam(value = "q", required = false) String keyword,
+            @RequestParam(value = "category", required = false) IdeaCategory category) {
+        return searchService.search(keyword, category);
     }
 
     @GetMapping("/{id}")
