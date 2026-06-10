@@ -1,0 +1,5 @@
+# 本地环境变量（含密钥，勿提交）
+.env
+
+# Spring Boot 本地覆盖配置
+IdeaForge/src/main/resources/application-local.yml
