@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "optimize:logo": "node scripts/optimize-logo.mjs"
   },
   "dependencies": {
     "@wangeditor/editor": "^5.1.23",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",
+    "sharp": "^0.34.3",
     "vite": "^8.0.8",
     "vite-plugin-vue-devtools": "^8.1.1"
   },

@@ -3,3 +3,6 @@
 
 # Spring Boot 本地覆盖配置
 IdeaForge/src/main/resources/application-local.yml
+
+# Logo 原始大图（本地备份，由 npm run optimize:logo 使用）
+ideaforge-ui/scripts/logo-source.png

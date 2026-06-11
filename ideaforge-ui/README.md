@@ -30,7 +30,7 @@ ideaforge-ui/
 └── src/
     ├── main.js              # 应用入口（注册 router、pinia）
     ├── App.vue              # 根布局壳（导航 + 侧栏 + router-view）
-    ├── assets/              # 静态资源（css、图片）
+    ├── assets/              # 静态资源（css、logo.webp 等；由 npm run optimize:logo 生成）
     ├── stores/              # Pinia 全局状态
     │   └── category.js      # 类别字典缓存（ensureLoaded / refresh）
     ├── api/                 # 后端 HTTP 封装

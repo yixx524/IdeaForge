@@ -47,7 +47,7 @@ import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import CategorySidebar from '@/components/CategorySidebar.vue'
 import { useCategoryStore } from '@/stores/category'
-import logoUrl from '@/assets/logo.png'
+import logoUrl from '@/assets/logo.webp'
 
 const route = useRoute()
 const categoryStore = useCategoryStore()

@@ -187,7 +187,7 @@ flowchart TB
 - JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
 - `status` 字段数据库存储小写（`pending` / `confirmed` / `deleted`），通过 `ItemStatusConverter` 映射
 - **知识条目软删除**：须执行 [`db/migrate_soft_delete.sql`](db/migrate_soft_delete.sql) 扩展 status CHECK 约束，否则软删除写入失败
-- `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
+- **Logo 静态资源**：已优化为 `logo.webp`（导航，约 0.4 KB）+ `public/favicon.png`（约 1.6 KB）；源图备份于 `ideaforge-ui/scripts/logo-source.png`，再生成请执行 `cd ideaforge-ui && npm run optimize:logo`
 - 类别改由 PostgreSQL 表 `idea_categories` 维护，前端「类别管理」页可增改删（软删除）；**部署前须在 VM 执行** [`db/migrate_idea_categories.sql`](db/migrate_idea_categories.sql)（或参考 `public.sql`），否则应用启动 validate 失败
 - **排版正文字段**：须执行 [`db/migrate_final_content.sql`](db/migrate_final_content.sql) 添加 `suggested_content` / `final_content` 列
 - 类别 `code` 创建后不可修改；软删除（`enabled=false`）后管理页不再显示，历史条目保留；后期可在 DB 手动 `DELETE` 硬删
