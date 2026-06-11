@@ -68,34 +68,30 @@
       <p>暂无类别，请先添加或确认后端已执行 idea_categories 建表脚本</p>
     </div>
 
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-            <h3 id="delete-modal-title">确认删除</h3>
-            <p class="modal-message">
-              确定删除「<strong>{{ deleteTarget.label }}</strong>」
-              <code class="code">{{ deleteTarget.code }}</code>？
-            </p>
-            <p class="modal-hint">删除后本页不再显示，历史知识条目仍会保留该类别。</p>
-            <div class="modal-actions">
-              <button type="button" class="btn-secondary" :disabled="saving" @click="cancelDelete">
-                取消
-              </button>
-              <button type="button" class="btn-danger-solid" :disabled="saving" @click="confirmDelete">
-                {{ saving ? '删除中…' : '确认删除' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <ConfirmModal
+      :open="!!deleteTarget"
+      title="确认删除"
+      icon="delete"
+      variant="danger"
+      confirm-label="确认删除"
+      loading-label="删除中…"
+      :loading="saving"
+      hint="删除后本页不再显示，历史知识条目仍会保留该类别。"
+      @cancel="cancelDelete"
+      @confirm="confirmDelete"
+    >
+      <template #message>
+        确定删除「<strong>{{ deleteTarget?.label }}</strong>」
+        <code class="code">{{ deleteTarget?.code }}</code>？
+      </template>
+    </ConfirmModal>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { createCategory, deleteCategory, listCategories, updateCategory } from '@/api/category'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const categories = ref([])
 const loading = ref(false)
@@ -362,78 +358,6 @@ input {
   background: var(--color-error-bg);
   color: var(--color-error);
   border: 1px solid rgba(220, 38, 38, 0.2);
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
-}
-
-.modal {
-  width: 100%;
-  max-width: 400px;
-  padding: 1.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.modal h3 {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin-bottom: 0.75rem;
-}
-
-.modal-message {
-  font-size: 0.9375rem;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.modal-message strong {
-  color: var(--color-primary);
-}
-
-.modal-message .code {
-  margin-left: 0.25rem;
-}
-
-.modal-hint {
-  margin-top: 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.625rem;
-  margin-top: 1.25rem;
-}
-
-.btn-danger-solid {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  background: var(--color-error);
-  color: #fff;
-}
-
-.btn-danger-solid:not(:disabled):hover {
-  background: #b91c1c;
 }
 
 button:disabled {

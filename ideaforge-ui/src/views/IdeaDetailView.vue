@@ -82,7 +82,44 @@
       <article v-else class="card detail-card edit-card">
         <div class="card-header">
           <h2>编辑知识条目</h2>
-          <p class="card-hint">修改最终标题、摘要、标签、类别与排版正文</p>
+          <p class="card-hint">修改最终标题、摘要、标签、类别与排版正文，或使用 AI 重新整理</p>
+        </div>
+
+        <div class="ai-panel">
+          <div class="ai-panel-header">
+            <span class="ai-panel-dot" />
+            AI 重新整理
+          </div>
+          <div class="ai-panel-row">
+            <div class="ai-panel-sources">
+              <p class="ai-panel-label">整理来源</p>
+              <div class="choice-group">
+                <label
+                  class="choice-pill"
+                  :class="{ active: reprocessSource === 'original' }"
+                >
+                  <input v-model="reprocessSource" type="radio" value="original" />
+                  原始正文
+                </label>
+                <label
+                  class="choice-pill"
+                  :class="{ active: reprocessSource === 'current' }"
+                >
+                  <input v-model="reprocessSource" type="radio" value="current" />
+                  当前排版正文
+                </label>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn-secondary reprocess-btn"
+              :disabled="reprocessing || saving"
+              @click="requestReprocess"
+            >
+              <span v-if="reprocessing" class="spinner" />
+              {{ reprocessing ? 'AI 整理中…' : '开始整理' }}
+            </button>
+          </div>
         </div>
 
         <label class="field">
@@ -123,32 +160,54 @@
       <p class="empty-title">{{ error }}</p>
       <RouterLink :to="backTo" class="btn-secondary">返回浏览</RouterLink>
     </div>
+
+    <ConfirmModal
+      :open="reprocessConfirmOpen"
+      title="AI 重新整理"
+      icon="ai"
+      variant="primary"
+      confirm-label="开始整理"
+      loading-label="AI 整理中…"
+      :loading="reprocessing"
+      hint="整理完成后请核对内容，确认无误后再保存。"
+      @cancel="cancelReprocess"
+      @confirm="handleReprocess"
+    >
+      <template #message>
+        重新整理将覆盖当前编辑区中的标题、摘要、标签、类别与排版正文，是否继续？
+      </template>
+    </ConfirmModal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { getIdeaById, exportIdeaDocx, updateIdea } from '@/api/idea'
+import { getIdeaById, exportIdeaDocx, updateIdea, processIdea } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
 import CategoryBadge from '@/components/CategoryBadge.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
-import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { isEmptyHtml, toEditorHtml, htmlToPlainText } from '@/utils/contentHtml'
 
 const route = useRoute()
 
 const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
+const reprocessing = ref(false)
 const exporting = ref(false)
+const reprocessSource = ref('original')
+const reprocessConfirmOpen = ref(false)
 const error = ref(null)
 const message = ref(null)
 const actionError = ref(null)
 const idea = ref(null)
 const allCategories = ref([])
 const enabledCategories = ref([])
+const hasSuggestion = ref(false)
 
 const editForm = reactive({
   title: '',
@@ -156,6 +215,14 @@ const editForm = reactive({
   tagsText: '',
   category: '',
   content: '',
+})
+
+const suggestion = reactive({
+  suggestedTitle: '',
+  suggestedSummary: '',
+  suggestedTags: [],
+  suggestedCategory: '',
+  suggestedContent: '',
 })
 
 const backTo = computed(() => {
@@ -212,8 +279,19 @@ async function loadDetail() {
 onMounted(loadDetail)
 watch(() => route.params.id, loadDetail)
 
+function resetSuggestion() {
+  hasSuggestion.value = false
+  suggestion.suggestedTitle = ''
+  suggestion.suggestedSummary = ''
+  suggestion.suggestedTags = []
+  suggestion.suggestedCategory = ''
+  suggestion.suggestedContent = ''
+}
+
 function startEdit() {
   fillEditForm(idea.value)
+  reprocessSource.value = 'original'
+  resetSuggestion()
   editing.value = true
   message.value = null
   actionError.value = null
@@ -221,7 +299,84 @@ function startEdit() {
 
 function cancelEdit() {
   editing.value = false
+  resetSuggestion()
   actionError.value = null
+}
+
+function buildProcessPayload() {
+  if (reprocessSource.value === 'original') {
+    const content = idea.value?.originalContent?.trim()
+    if (!content) {
+      throw new Error('原始正文为空，无法整理')
+    }
+    return {
+      originalTitle: idea.value?.originalTitle?.trim() || null,
+      originalContent: content,
+    }
+  }
+
+  const content = htmlToPlainText(editForm.content)
+  if (!content) {
+    throw new Error('当前排版正文为空，无法整理')
+  }
+  return {
+    originalTitle: editForm.title.trim() || null,
+    originalContent: content,
+  }
+}
+
+function requestReprocess() {
+  actionError.value = null
+  try {
+    buildProcessPayload()
+    reprocessConfirmOpen.value = true
+  } catch (e) {
+    actionError.value = e.message
+  }
+}
+
+function cancelReprocess() {
+  if (!reprocessing.value) {
+    reprocessConfirmOpen.value = false
+  }
+}
+
+async function handleReprocess() {
+  let payload
+  try {
+    payload = buildProcessPayload()
+  } catch (e) {
+    actionError.value = e.message
+    reprocessConfirmOpen.value = false
+    return
+  }
+
+  reprocessing.value = true
+  actionError.value = null
+  message.value = null
+
+  try {
+    const result = await processIdea(payload)
+
+    suggestion.suggestedTitle = result.suggestedTitle ?? ''
+    suggestion.suggestedSummary = result.suggestedSummary ?? ''
+    suggestion.suggestedTags = result.suggestedTags ?? []
+    suggestion.suggestedCategory = result.suggestedCategory ?? ''
+    suggestion.suggestedContent = result.suggestedContent ?? ''
+    hasSuggestion.value = true
+
+    editForm.title = result.suggestedTitle ?? ''
+    editForm.summary = result.suggestedSummary ?? ''
+    editForm.tagsText = (result.suggestedTags ?? []).join('，')
+    editForm.category = result.suggestedCategory ?? editForm.category ?? enabledCategories.value[0]?.value ?? ''
+    editForm.content = toEditorHtml(result.suggestedContent ?? payload.originalContent)
+    reprocessConfirmOpen.value = false
+    message.value = 'AI 重新整理完成，请核对后保存'
+  } catch (e) {
+    actionError.value = e.message
+  } finally {
+    reprocessing.value = false
+  }
 }
 
 async function handleSave() {
@@ -235,7 +390,7 @@ async function handleSave() {
   message.value = null
 
   try {
-    idea.value = await updateIdea(route.params.id, {
+    const payload = {
       finalTitle: editForm.title.trim(),
       finalSummary: editForm.summary.trim() || null,
       finalTags: parseTags(editForm.tagsText),
@@ -243,8 +398,19 @@ async function handleSave() {
       finalContent: isEmptyHtml(editForm.content)
         ? null
         : editForm.content.trim(),
-    })
+    }
+
+    if (hasSuggestion.value) {
+      payload.suggestedTitle = suggestion.suggestedTitle
+      payload.suggestedSummary = suggestion.suggestedSummary
+      payload.suggestedTags = suggestion.suggestedTags
+      payload.suggestedCategory = suggestion.suggestedCategory
+      payload.suggestedContent = suggestion.suggestedContent
+    }
+
+    idea.value = await updateIdea(route.params.id, payload)
     editing.value = false
+    resetSuggestion()
     message.value = '保存成功'
   } catch (e) {
     actionError.value = e.message
@@ -311,6 +477,16 @@ async function handleExport() {
   gap: 0.375rem;
   margin-top: 1.25rem;
   font-size: 0.875rem;
+}
+
+.ai-panel-sources {
+  flex: 1;
+  min-width: 0;
+}
+
+.reprocess-btn {
+  flex-shrink: 0;
+  align-self: flex-end;
 }
 
 .edit-card input,
@@ -419,5 +595,17 @@ async function handleExport() {
   height: 24px;
   border-width: 3px;
   margin-bottom: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .ai-panel-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reprocess-btn {
+    align-self: stretch;
+    justify-content: center;
+  }
 }
 </style>

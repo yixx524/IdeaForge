@@ -102,7 +102,8 @@ cd IdeaForge
 | POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
 | GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 类别筛选；无参数时返回最近 100 条 | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
-| PUT | `/api/ideas/{id}` | 更新最终标题/摘要/标签/类别/排版正文 | 已完成 |
+| PUT | `/api/ideas/{id}` | 更新最终标题/摘要/标签/类别/排版正文；可选携带 suggested 字段（AI 重新整理后） | 已完成 |
+| DELETE | `/api/ideas/{id}` | 软删除（status=deleted，浏览不可见） | 已完成 |
 | POST | `/api/ideas/parse-document` | 上传 `.docx`/`.pdf`，提取文本（multipart `file`） | 已完成 |
 | GET | `/api/ideas/{id}/export/docx` | 导出单条为 Word 文档（排版分段） | 已完成 |
 

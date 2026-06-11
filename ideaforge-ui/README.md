@@ -121,7 +121,8 @@ server: {
 | `saveIdea()` | `POST /api/ideas` | 保存 |
 | `searchIdeas({ q, category })` | `GET /api/ideas/search` | 搜索 / 浏览列表 |
 | `getIdeaById(id)` | `GET /api/ideas/{id}` | 详情 |
-| `updateIdea(id, payload)` | `PUT /api/ideas/{id}` | 更新详情 |
+| `updateIdea(id, payload)` | `PUT /api/ideas/{id}` | 更新详情（含可选 suggested 字段） |
+| `deleteIdea(id)` | `DELETE /api/ideas/{id}` | 软删除知识条目 |
 | `parseDocument(file)` | `POST /api/ideas/parse-document` | 文档解析 |
 | `exportIdeaDocx(id)` | `GET /api/ideas/{id}/export/docx` | Word 导出 |
 | `listCategories()` | `GET /api/categories` | enabled 类别 |

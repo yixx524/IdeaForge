@@ -58,3 +58,22 @@ export function isEmptyHtml(html) {
     .trim()
   return !text
 }
+
+/**
+ * 富文本 HTML 转纯文本，保留段落换行（供 AI 重新整理「当前排版正文」来源）。
+ */
+export function htmlToPlainText(html) {
+  if (!html?.trim()) return ''
+  return html
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}

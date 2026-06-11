@@ -55,6 +55,8 @@
 | V1.6 AI 正文排版 | 已完成（`final_content` 富文本 HTML，WangEditor） |
 | 标签/类别搜索 | 已修复（关键词与类别分离；类别用侧栏筛选） |
 | 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
+| 浏览软删除 | 已完成（`DELETE /api/ideas/{id}`，status=deleted，浏览不可见） |
+| 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -65,7 +67,8 @@ IdeaForge-v/
 ├── db/
 │   ├── public.sql            # VM 数据库参考脚本
 │   ├── migrate_idea_categories.sql  # 类别字典表迁移脚本
-│   └── migrate_final_content.sql    # 排版正文字段迁移
+│   ├── migrate_final_content.sql    # 排版正文字段迁移
+│   └── migrate_soft_delete.sql      # 知识条目软删除 status 扩展
 ├── IdeaForge/                # 后端（Spring Boot）
 │   ├── README.md             # 后端专项说明
 │   └── src/main/java/com/exam/ideaforge/
@@ -178,7 +181,8 @@ flowchart TB
 ### 已知问题
 
 - JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
-- `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
+- `status` 字段数据库存储小写（`pending` / `confirmed` / `deleted`），通过 `ItemStatusConverter` 映射
+- **知识条目软删除**：须执行 [`db/migrate_soft_delete.sql`](db/migrate_soft_delete.sql) 扩展 status CHECK 约束，否则软删除写入失败
 - `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
 - 类别改由 PostgreSQL 表 `idea_categories` 维护，前端「类别管理」页可增改删（软删除）；**部署前须在 VM 执行** [`db/migrate_idea_categories.sql`](db/migrate_idea_categories.sql)（或参考 `public.sql`），否则应用启动 validate 失败
 - **排版正文字段**：须执行 [`db/migrate_final_content.sql`](db/migrate_final_content.sql) 添加 `suggested_content` / `final_content` 列

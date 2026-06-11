@@ -27,6 +27,9 @@
     <Transition name="fade">
       <p v-if="error" class="toast toast-error">{{ error }}</p>
     </Transition>
+    <Transition name="fade">
+      <p v-if="success" class="toast toast-success">{{ success }}</p>
+    </Transition>
 
     <div v-if="results.length" class="results-meta">
       共 <strong>{{ results.length }}</strong> 条
@@ -40,6 +43,7 @@
         :key="item.id"
         :item="item"
         :category-label="resolveLabel(item.finalCategory)"
+        @delete="requestDelete"
       />
     </section>
 
@@ -53,26 +57,47 @@
     <div v-else-if="!loading && !loaded && !error" class="empty-state welcome-state">
       <p>正在加载知识库…</p>
     </div>
+
+    <ConfirmModal
+      :open="!!deleteTarget"
+      title="确认删除"
+      icon="delete"
+      variant="danger"
+      confirm-label="确认删除"
+      loading-label="删除中…"
+      :loading="deleting"
+      hint="删除后浏览页不再显示，数据库记录保留。"
+      @cancel="cancelDelete"
+      @confirm="confirmDelete"
+    >
+      <template #message>
+        确定删除「<strong>{{ deleteTarget?.finalTitle }}</strong>」？
+      </template>
+    </ConfirmModal>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { searchIdeas } from '@/api/idea'
+import { searchIdeas, deleteIdea } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
 import IdeaResultCard from '@/components/IdeaResultCard.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const keyword = ref('')
 const loading = ref(false)
+const deleting = ref(false)
 const error = ref(null)
+const success = ref(null)
 const results = ref([])
 const loaded = ref(false)
 const allCategories = ref([])
+const deleteTarget = ref(null)
 
 const activeCategoryLabel = computed(() => {
   const code = route.query.category
@@ -135,6 +160,35 @@ function applySearch() {
     delete query.q
   }
   router.push({ path: '/browse', query })
+}
+
+function requestDelete(item) {
+  deleteTarget.value = item
+  success.value = null
+}
+
+function cancelDelete() {
+  deleteTarget.value = null
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+
+  deleting.value = true
+  error.value = null
+  success.value = null
+  const { id, finalTitle } = deleteTarget.value
+
+  try {
+    await deleteIdea(id)
+    results.value = results.value.filter((item) => item.id !== id)
+    deleteTarget.value = null
+    success.value = `已删除：${finalTitle}`
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
 

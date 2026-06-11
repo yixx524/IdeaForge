@@ -46,6 +46,11 @@ export async function parseDocument(file) {
   return data
 }
 
+/** 软删除知识条目（status=deleted，浏览不可见） */
+export async function deleteIdea(id) {
+  await http.delete(`/ideas/${id}`)
+}
+
 /** 导出单条知识条目为 Word 文档并触发浏览器下载 */
 export async function exportIdeaDocx(id) {
   const response = await http.get(`/ideas/${id}/export/docx`, { responseType: 'blob' })

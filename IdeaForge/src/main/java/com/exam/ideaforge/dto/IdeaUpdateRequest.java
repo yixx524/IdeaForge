@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.util.List;
 
-/** PUT /api/ideas/{id} 请求体：更新用户确认后的最终字段 */
+/** PUT /api/ideas/{id} 请求体：更新用户确认后的最终字段；可选携带 AI 重新整理后的建议字段 */
 @Getter
 @Setter
 public class IdeaUpdateRequest {
@@ -23,4 +23,10 @@ public class IdeaUpdateRequest {
     private String finalCategory;
 
     private String finalContent;
+
+    private String suggestedTitle;
+    private String suggestedSummary;
+    private List<String> suggestedTags;
+    private String suggestedCategory;
+    private String suggestedContent;
 }
