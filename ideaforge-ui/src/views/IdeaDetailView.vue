@@ -120,27 +120,28 @@
               {{ reprocessing ? 'AI 整理中…' : '开始整理' }}
             </button>
           </div>
+          <p v-if="reprocessing" class="ai-panel-stream-hint">内容正在实时生成，请稍候…</p>
         </div>
 
         <label class="field">
           <span class="field-label">最终标题</span>
-          <input v-model="editForm.title" type="text" />
+          <input v-model="editForm.title" type="text" :disabled="reprocessing" />
         </label>
 
         <label class="field">
           <span class="field-label">最终摘要</span>
-          <textarea v-model="editForm.summary" rows="3" />
+          <textarea v-model="editForm.summary" rows="3" :disabled="reprocessing" />
         </label>
 
         <label class="field">
           <span class="field-label">标签</span>
-          <input v-model="editForm.tagsText" type="text" placeholder="标签1，标签2" />
+          <input v-model="editForm.tagsText" type="text" placeholder="标签1，标签2" :disabled="reprocessing" />
           <span class="field-hint">多个标签用逗号分隔</span>
         </label>
 
         <label class="field">
           <span class="field-label">类别</span>
-          <select v-model="editForm.category">
+          <select v-model="editForm.category" :disabled="reprocessing">
             <option v-for="item in enabledCategories" :key="item.value" :value="item.value">
               {{ item.label }}
             </option>
@@ -149,7 +150,11 @@
 
         <label class="field field-rich">
           <span class="field-label">排版正文</span>
-          <RichTextEditor v-model="editForm.content" min-height="360px" />
+          <div v-if="reprocessStreaming" class="stream-preview">
+            <RichTextContent :content="reprocessStreamContent || '…'" />
+            <span class="stream-cursor" aria-hidden="true" />
+          </div>
+          <RichTextEditor v-else v-model="editForm.content" min-height="360px" />
           <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
         </label>
       </article>
@@ -181,9 +186,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { getIdeaById, exportIdeaDocx, updateIdea, processIdea } from '@/api/idea'
+import { getIdeaById, exportIdeaDocx, updateIdea, processIdeaStream, applyProcessResult } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
 import CategoryBadge from '@/components/CategoryBadge.vue'
@@ -198,6 +203,8 @@ const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
 const reprocessing = ref(false)
+const reprocessStreaming = ref(false)
+const reprocessStreamContent = ref('')
 const exporting = ref(false)
 const reprocessSource = ref('original')
 const reprocessConfirmOpen = ref(false)
@@ -224,6 +231,25 @@ const suggestion = reactive({
   suggestedCategory: '',
   suggestedContent: '',
 })
+
+let reprocessAbortController = null
+
+onBeforeUnmount(() => {
+  reprocessAbortController?.abort()
+})
+
+function applyReprocessPartial(partial) {
+  applyProcessResult(editForm, suggestion, partial, enabledCategories.value)
+  if (partial.suggestedContent != null) {
+    reprocessStreamContent.value = partial.suggestedContent
+  }
+}
+
+function finalizeReprocessResult(result, fallbackContent) {
+  applyReprocessPartial(result)
+  editForm.content = toEditorHtml(result.suggestedContent ?? fallbackContent)
+  hasSuggestion.value = true
+}
 
 const backTo = computed(() => {
   const query = {}
@@ -336,9 +362,11 @@ function requestReprocess() {
 }
 
 function cancelReprocess() {
-  if (!reprocessing.value) {
-    reprocessConfirmOpen.value = false
+  if (reprocessing.value) {
+    reprocessAbortController?.abort()
+    return
   }
+  reprocessConfirmOpen.value = false
 }
 
 async function handleReprocess() {
@@ -351,31 +379,36 @@ async function handleReprocess() {
     return
   }
 
+  reprocessAbortController?.abort()
+  reprocessAbortController = new AbortController()
+
   reprocessing.value = true
+  reprocessStreaming.value = true
+  reprocessStreamContent.value = ''
   actionError.value = null
   message.value = null
+  reprocessConfirmOpen.value = false
 
   try {
-    const result = await processIdea(payload)
-
-    suggestion.suggestedTitle = result.suggestedTitle ?? ''
-    suggestion.suggestedSummary = result.suggestedSummary ?? ''
-    suggestion.suggestedTags = result.suggestedTags ?? []
-    suggestion.suggestedCategory = result.suggestedCategory ?? ''
-    suggestion.suggestedContent = result.suggestedContent ?? ''
-    hasSuggestion.value = true
-
-    editForm.title = result.suggestedTitle ?? ''
-    editForm.summary = result.suggestedSummary ?? ''
-    editForm.tagsText = (result.suggestedTags ?? []).join('，')
-    editForm.category = result.suggestedCategory ?? editForm.category ?? enabledCategories.value[0]?.value ?? ''
-    editForm.content = toEditorHtml(result.suggestedContent ?? payload.originalContent)
-    reprocessConfirmOpen.value = false
-    message.value = 'AI 重新整理完成，请核对后保存'
+    await processIdeaStream(
+      payload,
+      {
+        onPartial: applyReprocessPartial,
+        onComplete: (result) => {
+          finalizeReprocessResult(result, payload.originalContent)
+          message.value = 'AI 重新整理完成，请核对后保存'
+        },
+      },
+      { signal: reprocessAbortController.signal },
+    )
   } catch (e) {
-    actionError.value = e.message
+    if (e.name !== 'AbortError') {
+      actionError.value = e.message
+    }
   } finally {
     reprocessing.value = false
+    reprocessStreaming.value = false
+    reprocessAbortController = null
   }
 }
 
@@ -487,6 +520,32 @@ async function handleExport() {
 .reprocess-btn {
   flex-shrink: 0;
   align-self: flex-end;
+}
+
+.ai-panel-stream-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+}
+
+.stream-preview {
+  position: relative;
+  min-height: 360px;
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .edit-card input,

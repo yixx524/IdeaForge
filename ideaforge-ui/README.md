@@ -117,7 +117,8 @@ server: {
 
 | 前端调用 | 后端接口 | 说明 |
 |----------|----------|------|
-| `processIdea()` | `POST /api/ideas/process` | AI 整理 |
+| `processIdeaStream()` | `POST /api/ideas/process/stream` | SSE 流式 AI 整理（推荐） |
+| `processIdea()` | `POST /api/ideas/process` | 同步 AI 整理（兼容） |
 | `saveIdea()` | `POST /api/ideas` | 保存 |
 | `searchIdeas({ q, category })` | `GET /api/ideas/search` | 搜索 / 浏览列表 |
 | `getIdeaById(id)` | `GET /api/ideas/{id}` | 详情 |

@@ -64,28 +64,28 @@
 
       <div class="ai-badge">
         <span class="ai-dot" />
-        AI 已整理完成，请核对以下内容
+        {{ streaming ? 'AI 正在整理，内容实时生成中…' : 'AI 已整理完成，请核对以下内容' }}
       </div>
 
       <label class="field">
         <span class="label">最终标题</span>
-        <input v-model="finalForm.title" type="text" />
+        <input v-model="finalForm.title" type="text" :disabled="streaming" />
       </label>
 
       <label class="field">
         <span class="label">最终摘要</span>
-        <textarea v-model="finalForm.summary" rows="3" placeholder="一句话概括…" />
+        <textarea v-model="finalForm.summary" rows="3" placeholder="一句话概括…" :disabled="streaming" />
       </label>
 
       <label class="field">
         <span class="label">标签</span>
-        <input v-model="finalForm.tagsText" type="text" placeholder="标签1，标签2，标签3" />
+        <input v-model="finalForm.tagsText" type="text" placeholder="标签1，标签2，标签3" :disabled="streaming" />
         <span class="field-hint">多个标签用逗号分隔</span>
       </label>
 
       <label class="field">
         <span class="label">类别</span>
-        <select v-model="finalForm.category">
+        <select v-model="finalForm.category" :disabled="streaming">
           <option v-for="item in categories" :key="item.value" :value="item.value">
             {{ item.label }}
           </option>
@@ -94,15 +94,19 @@
 
       <label class="field field-rich">
         <span class="label">排版正文</span>
-        <RichTextEditor v-model="finalForm.content" min-height="320px" />
+        <div v-if="streaming" class="stream-preview">
+          <RichTextContent :content="streamContent || '…'" />
+          <span class="stream-cursor" aria-hidden="true" />
+        </div>
+        <RichTextEditor v-else v-model="finalForm.content" min-height="320px" />
         <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
       </label>
 
       <div class="card-footer actions">
         <button type="button" class="btn-secondary" :disabled="loading" @click="handleBack">
-          返回修改
+          {{ streaming ? '取消整理' : '返回修改' }}
         </button>
-        <button type="button" class="btn-primary" :disabled="loading" @click="handleSave">
+        <button type="button" class="btn-primary" :disabled="loading || streaming" @click="handleSave">
           <span v-if="loading" class="spinner" />
           {{ loading ? '保存中…' : '确认保存' }}
         </button>
@@ -119,17 +123,23 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { parseDocument, processIdea, saveIdea } from '@/api/idea'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { parseDocument, processIdeaStream, saveIdea, applyProcessResult } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { toCategoryOptions } from '@/constants/categories'
 import FileUploadZone from '@/components/FileUploadZone.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import RichTextContent from '@/components/RichTextContent.vue'
 import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
+
+const router = useRouter()
 
 /** 当前步骤：input 录入 | review 确认 */
 const step = ref('input')
 const loading = ref(false)
+const streaming = ref(false)
+const streamContent = ref('')
 const parsing = ref(false)
 const error = ref(null)
 const success = ref(null)
@@ -160,6 +170,39 @@ const finalForm = reactive({
   category: '',
   content: '',
 })
+
+let processAbortController = null
+
+onBeforeUnmount(() => {
+  processAbortController?.abort()
+})
+
+function resetReviewForm() {
+  finalForm.title = ''
+  finalForm.summary = ''
+  finalForm.tagsText = ''
+  finalForm.content = ''
+  streamContent.value = ''
+  Object.assign(suggestion, {
+    suggestedTitle: '',
+    suggestedSummary: '',
+    suggestedTags: [],
+    suggestedCategory: '',
+    suggestedContent: '',
+  })
+}
+
+function applyStreamPartial(partial) {
+  applyProcessResult(finalForm, suggestion, partial, categories.value)
+  if (partial.suggestedContent != null) {
+    streamContent.value = partial.suggestedContent
+  }
+}
+
+function finalizeStreamResult(result) {
+  applyStreamPartial(result)
+  finalForm.content = toEditorHtml(result.suggestedContent ?? original.content.trim())
+}
 
 onMounted(async () => {
   try {
@@ -212,35 +255,48 @@ function clearUpload() {
   uploadedCharCount.value = 0
 }
 
-/** 调用 POST /api/ideas/process，成功后切换到 review 步骤 */
+/** 调用 POST /api/ideas/process/stream，流式展示后切换到 review */
 async function handleProcess() {
   if (!original.content.trim()) {
     error.value = '请输入想法正文'
     return
   }
 
+  processAbortController?.abort()
+  processAbortController = new AbortController()
+
   loading.value = true
+  streaming.value = true
   error.value = null
   success.value = null
+  resetReviewForm()
+  step.value = 'review'
+
+  const payload = {
+    originalTitle: original.title.trim() || null,
+    originalContent: original.content.trim(),
+  }
 
   try {
-    const result = await processIdea({
-      originalTitle: original.title.trim() || null,
-      originalContent: original.content.trim(),
-    })
-
-    Object.assign(suggestion, result)
-    suggestion.suggestedContent = result.suggestedContent ?? ''
-    finalForm.title = result.suggestedTitle ?? ''
-    finalForm.summary = result.suggestedSummary ?? ''
-    finalForm.tagsText = (result.suggestedTags ?? []).join('，')
-    finalForm.category = result.suggestedCategory ?? finalForm.category ?? categories.value[0]?.value ?? ''
-    finalForm.content = toEditorHtml(result.suggestedContent ?? original.content.trim())
-    step.value = 'review'
+    await processIdeaStream(
+      payload,
+      {
+        onPartial: applyStreamPartial,
+        onComplete: finalizeStreamResult,
+      },
+      { signal: processAbortController.signal },
+    )
   } catch (e) {
+    if (e.name === 'AbortError') {
+      step.value = 'input'
+      return
+    }
     error.value = e.message
+    step.value = 'input'
   } finally {
     loading.value = false
+    streaming.value = false
+    processAbortController = null
   }
 }
 
@@ -273,11 +329,7 @@ async function handleSave() {
         : finalForm.content.trim(),
     })
 
-    success.value = `已保存：${saved.finalTitle}`
-    step.value = 'input'
-    original.title = ''
-    original.content = ''
-    clearUpload()
+    await router.push({ name: 'idea-detail', params: { id: saved.id } })
   } catch (e) {
     error.value = e.message
   } finally {
@@ -286,6 +338,10 @@ async function handleSave() {
 }
 
 function handleBack() {
+  if (streaming.value) {
+    processAbortController?.abort()
+    return
+  }
   step.value = 'input'
   error.value = null
 }
@@ -451,6 +507,26 @@ function handleBack() {
 .field-hint {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+.stream-preview {
+  position: relative;
+  min-height: 320px;
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--color-accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 input,

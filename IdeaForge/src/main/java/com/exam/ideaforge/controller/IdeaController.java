@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -61,10 +62,16 @@ public class IdeaController {
         this.exportService = exportService;
     }
 
-    /** 阶段一：AI 整理，不落库 */
+    /** 阶段一：AI 整理，不落库（同步，保留兼容） */
     @PostMapping("/process")
     public IdeaProcessResponse process(@Valid @RequestBody IdeaProcessRequest request) {
         return processService.process(request);
+    }
+
+    /** 阶段一：AI 整理 SSE 流式推送，推荐前端使用 */
+    @PostMapping(value = "/process/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter processStream(@Valid @RequestBody IdeaProcessRequest request) {
+        return processService.streamProcess(request);
     }
 
     /** 阶段二：用户确认后持久化 */

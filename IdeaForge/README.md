@@ -98,7 +98,8 @@ cd IdeaForge
 
 | 方法 | 路径 | 说明 | 状态 |
 |------|------|------|------|
-| POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成 |
+| POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成（同步，保留兼容） |
+| POST | `/api/ideas/process/stream` | SSE 流式 AI 整理，推送 partial / delta / complete 事件 | 已完成 |
 | POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
 | GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 类别筛选；无参数时返回最近 100 条 | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
@@ -118,7 +119,7 @@ cd IdeaForge
 
 ### 两阶段流程
 
-1. `POST /api/ideas/process` — AI 推理，结果返回前端，暂不入库
+1. `POST /api/ideas/process/stream`（推荐）或 `POST /api/ideas/process` — AI 推理，结果返回前端，暂不入库
 2. 用户在前端编辑确认
 3. `POST /api/ideas` — 一次性保存至 PostgreSQL
 

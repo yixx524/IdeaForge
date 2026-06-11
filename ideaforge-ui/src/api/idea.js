@@ -1,6 +1,113 @@
 import http from '@/api/http'
 
-/** 阶段一：调用 AI 整理，不落库 */
+/**
+ * 读取 fetch 返回的 SSE 流（POST 场景无法用 EventSource）。
+ * 支持 event: partial | delta | complete | error
+ */
+async function readSseStream(response, handlers = {}) {
+  const reader = response.body?.getReader()
+  if (!reader) {
+    throw new Error('浏览器不支持流式响应')
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let completed = false
+
+  const dispatch = (eventName, dataText) => {
+    if (!dataText) return
+    let parsed
+    try {
+      parsed = JSON.parse(dataText)
+    } catch {
+      parsed = dataText
+    }
+
+    if (eventName === 'delta' && handlers.onDelta) {
+      handlers.onDelta(parsed)
+      return
+    }
+    if (eventName === 'partial' && handlers.onPartial) {
+      handlers.onPartial(parsed)
+      return
+    }
+    if (eventName === 'complete') {
+      completed = true
+      if (handlers.onComplete) handlers.onComplete(parsed)
+      return
+    }
+    if (eventName === 'error') {
+      const message = typeof parsed === 'object' && parsed?.message ? parsed.message : String(parsed)
+      throw new Error(message)
+    }
+  }
+
+  const parseBlock = (block) => {
+    let eventName = 'message'
+    const dataLines = []
+
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim()
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart())
+      }
+    }
+
+    if (dataLines.length) {
+      dispatch(eventName, dataLines.join('\n'))
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    let boundary = buffer.indexOf('\n\n')
+    while (boundary !== -1) {
+      const block = buffer.slice(0, boundary)
+      buffer = buffer.slice(boundary + 2)
+      if (block.trim()) parseBlock(block)
+      boundary = buffer.indexOf('\n\n')
+    }
+  }
+
+  if (buffer.trim()) parseBlock(buffer)
+
+  if (!completed) {
+    throw new Error('AI 整理未完成，连接已中断')
+  }
+}
+
+/** 阶段一：SSE 流式 AI 整理，不落库 */
+export async function processIdeaStream(payload, handlers = {}, options = {}) {
+  const response = await fetch('/api/ideas/process/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    },
+    body: JSON.stringify(payload),
+    signal: options.signal,
+  })
+
+  if (!response.ok) {
+    let message = 'AI 整理失败'
+    try {
+      const body = await response.json()
+      message = body.message ?? message
+    } catch {
+      // ignore non-json error body
+    }
+    throw new Error(message)
+  }
+
+  await readSseStream(response, handlers)
+}
+
+/** 阶段一：同步 AI 整理（保留兼容） */
 export async function processIdea(payload) {
   const { data } = await http.post('/ideas/process', payload)
   return data
@@ -72,4 +179,31 @@ export async function exportIdeaDocx(id) {
   link.click()
   URL.revokeObjectURL(url)
   return filename
+}
+
+/** 将流式 partial / complete 结果应用到表单与 suggestion 缓存 */
+export function applyProcessResult(form, suggestion, result, categories = []) {
+  if (result.suggestedTitle) {
+    form.title = result.suggestedTitle
+    suggestion.suggestedTitle = result.suggestedTitle
+  }
+  if (result.suggestedSummary != null) {
+    form.summary = result.suggestedSummary
+    suggestion.suggestedSummary = result.suggestedSummary
+  }
+  if (result.suggestedTags?.length) {
+    form.tagsText = result.suggestedTags.join('，')
+    suggestion.suggestedTags = result.suggestedTags
+  }
+  if (result.suggestedCategory) {
+    const known = categories.find((item) => item.value === result.suggestedCategory)
+    if (known || !categories.length) {
+      form.category = result.suggestedCategory
+      suggestion.suggestedCategory = result.suggestedCategory
+    }
+  }
+  if (result.suggestedContent != null) {
+    suggestion.suggestedContent = result.suggestedContent
+  }
+  return result.suggestedContent
 }

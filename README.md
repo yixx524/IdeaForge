@@ -57,6 +57,7 @@
 | 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
 | 浏览软删除 | 已完成（`DELETE /api/ideas/{id}`，status=deleted，浏览不可见） |
 | 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
+| AI 流式整理 (SSE) | 已完成（`POST /api/ideas/process/stream`，前端打字机预览 suggestedContent） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
