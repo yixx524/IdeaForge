@@ -56,6 +56,7 @@
 | 标签/类别搜索 | 已修复（关键词与类别分离；类别用侧栏筛选） |
 | 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
 | 浏览软删除 | 已完成（`DELETE /api/ideas/{id}`，status=deleted，浏览不可见） |
+| 搜索分页 | 已完成（`GET /api/ideas/search?page=&size=`，BrowseView 分页器） |
 | 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
 | AI 流式整理 (SSE) | 已完成（`POST /api/ideas/process/stream`，前端打字机预览 suggestedContent） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
@@ -190,7 +191,7 @@ flowchart TB
 - 类别 `code` 创建后不可修改；软删除（`enabled=false`）后管理页不再显示，历史条目保留；后期可在 DB 手动 `DELETE` 硬删
 - 类别筛选：浏览页**左侧类别导航**（全部 + 各类别）；关键词搜索框不再匹配类别
 - 文档上传：扫描版 PDF 无法提取文字；单文件上限 10MB
-- 浏览「全部」默认返回最近 100 条已确认条目
+- 浏览页搜索支持分页（默认每页 20 条，最大 100 条）；URL 参数 `page`（0-based）可分享当前页
 - 标签搜索依赖 `final_tags` 正确入库；旧数据若 `final_tags` 为 NULL，需重新保存或手动补数据
 
 ## 环境要求

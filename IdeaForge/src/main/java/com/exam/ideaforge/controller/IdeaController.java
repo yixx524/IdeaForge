@@ -5,6 +5,7 @@ import com.exam.ideaforge.dto.IdeaProcessRequest;
 import com.exam.ideaforge.dto.IdeaProcessResponse;
 import com.exam.ideaforge.dto.IdeaResponse;
 import com.exam.ideaforge.dto.IdeaSaveRequest;
+import com.exam.ideaforge.dto.IdeaSearchPageResponse;
 import com.exam.ideaforge.dto.IdeaUpdateRequest;
 import com.exam.ideaforge.service.DocumentParseService;
 import com.exam.ideaforge.service.IdeaExportService;
@@ -32,7 +33,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -82,14 +82,16 @@ public class IdeaController {
     }
 
     /**
-     * 搜索已确认条目。
+     * 搜索已确认条目（分页）。
      * q：关键词（标题/摘要/正文/标签）；category：类别筛选（WORK 等），可与 q 组合。
      */
     @GetMapping("/search")
-    public List<IdeaResponse> search(
+    public IdeaSearchPageResponse search(
             @RequestParam(value = "q", required = false) String keyword,
-            @RequestParam(value = "category", required = false) String category) {
-        return searchService.search(keyword, category);
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return searchService.search(keyword, category, page, size);
     }
 
     /** 上传 Word/PDF，提取文本供录入页填充（不落库、不调用 AI） */

@@ -120,11 +120,11 @@ export async function saveIdea(payload) {
 }
 
 /**
- * 搜索已确认的知识条目；无 q/category 时返回最近条目列表
- * @param {{ q?: string, category?: string }} params
+ * 搜索已确认的知识条目（分页）；无 q/category 时返回最近条目列表
+ * @param {{ q?: string, category?: string, page?: number, size?: number }} params
  */
-export async function searchIdeas({ q, category } = {}) {
-  const params = {}
+export async function searchIdeas({ q, category, page = 0, size = 20 } = {}) {
+  const params = { page, size }
   if (q?.trim()) params.q = q.trim()
   if (category) params.category = category
   const { data } = await http.get('/ideas/search', { params })

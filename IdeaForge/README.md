@@ -101,12 +101,14 @@ cd IdeaForge
 | POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成（同步，保留兼容） |
 | POST | `/api/ideas/process/stream` | SSE 流式 AI 整理，推送 partial / delta / complete 事件 | 已完成 |
 | POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
-| GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 类别筛选；无参数时返回最近 100 条 | 已完成 |
+| GET | `/api/ideas/search?q=&category=&page=&size=` | 关键词搜索 + 类别筛选（分页）；无参数时返回最近条目，默认 page=0、size=20 | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
 | PUT | `/api/ideas/{id}` | 更新最终标题/摘要/标签/类别/排版正文；可选携带 suggested 字段（AI 重新整理后） | 已完成 |
 | DELETE | `/api/ideas/{id}` | 软删除（status=deleted，浏览不可见） | 已完成 |
 | POST | `/api/ideas/parse-document` | 上传 `.docx`/`.pdf`，提取文本（multipart `file`） | 已完成 |
 | GET | `/api/ideas/{id}/export/docx` | 导出单条为 Word 文档（排版分段） | 已完成 |
+
+`GET /api/ideas/search` 响应体为 `IdeaSearchPageResponse`：`content`（条目数组）、`page`、`size`、`totalElements`、`totalPages`、`hasNext`、`hasPrevious`。
 
 ### 类别字典 API
 

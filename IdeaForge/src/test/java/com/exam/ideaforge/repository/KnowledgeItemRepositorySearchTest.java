@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -38,16 +42,35 @@ class KnowledgeItemRepositorySearchTest {
         item.setStatus(ItemStatus.CONFIRMED);
         repository.saveAndFlush(item);
 
-        assertThat(repository.searchByKeyword("机器"))
+        Pageable pageable = PageRequest.of(0, 50);
+
+        assertThat(repository.searchByKeyword("机器", pageable).getContent())
                 .extracting(KnowledgeItem::getFinalTitle)
                 .contains("测试标题");
 
-        assertThat(repository.searchByKeyword("AI"))
+        assertThat(repository.searchByKeyword("AI", pageable).getContent())
                 .extracting(KnowledgeItem::getFinalTitle)
                 .contains("测试标题");
 
-        assertThat(repository.findConfirmedByCategory("WORK"))
+        assertThat(repository.findConfirmedByCategory("WORK", pageable).getContent())
                 .extracting(KnowledgeItem::getFinalTitle)
                 .contains("测试标题");
+    }
+
+    @Test
+    void search_pagination_returnsPageMetadata() {
+        KnowledgeItem item = new KnowledgeItem();
+        item.setOriginalContent("原始正文内容");
+        item.setFinalTitle("分页测试");
+        item.setFinalCategory("WORK");
+        item.setStatus(ItemStatus.CONFIRMED);
+        repository.saveAndFlush(item);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<KnowledgeItem> page = repository.findAllConfirmedOrderByCreatedAtDesc(pageable);
+
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
+        assertThat(page.getContent()).isNotEmpty();
+        assertThat(page.getContent()).extracting(KnowledgeItem::getFinalTitle).contains("分页测试");
     }
 }

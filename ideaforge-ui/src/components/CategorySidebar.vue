@@ -66,6 +66,7 @@ function selectCategory(code) {
   } else {
     delete query.category
   }
+  delete query.page
 
   if (route.name === 'idea-detail') {
     router.push({ path: '/browse', query })

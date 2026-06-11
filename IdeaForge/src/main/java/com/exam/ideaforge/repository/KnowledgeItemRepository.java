@@ -1,11 +1,12 @@
 package com.exam.ideaforge.repository;
 
 import com.exam.ideaforge.entity.KnowledgeItem;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UUID> {
@@ -24,8 +25,13 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
             FROM knowledge_items k
             WHERE k.status = 'confirmed' AND k.final_category = :category
             ORDER BY k.created_at DESC
-            """, nativeQuery = true)
-    List<KnowledgeItem> findConfirmedByCategory(@Param("category") String category);
+            """,
+            countQuery = """
+            SELECT count(*) FROM knowledge_items k
+            WHERE k.status = 'confirmed' AND k.final_category = :category
+            """,
+            nativeQuery = true)
+    Page<KnowledgeItem> findConfirmedByCategory(@Param("category") String category, Pageable pageable);
 
     /**
      * V1 关键词搜索：匹配最终标题、摘要、排版正文、原始标题/正文及标签数组。
@@ -50,10 +56,70 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
                 )
             )
             ORDER BY k.created_at DESC
-            """, nativeQuery = true)
-    List<KnowledgeItem> searchByKeyword(@Param("keyword") String keyword);
+            """,
+            countQuery = """
+            SELECT count(*) FROM knowledge_items k
+            WHERE k.status = 'confirmed' AND (
+                k.final_title ILIKE '%' || :keyword || '%' OR
+                k.final_summary ILIKE '%' || :keyword || '%' OR
+                k.final_content ILIKE '%' || :keyword || '%' OR
+                k.original_title ILIKE '%' || :keyword || '%' OR
+                k.original_content ILIKE '%' || :keyword || '%' OR
+                EXISTS (
+                    SELECT 1 FROM unnest(COALESCE(k.final_tags, ARRAY[]::text[])) AS tag
+                    WHERE tag ILIKE '%' || :keyword || '%'
+                )
+            )
+            """,
+            nativeQuery = true)
+    Page<KnowledgeItem> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    /** 列出已确认条目（浏览页「全部」），按创建时间倒序，限制条数 */
+    /** 关键词 + 类别组合筛选 */
+    @Query(value = """
+            SELECT k.id, k.original_title, k.original_content,
+                   k.suggested_title, k.suggested_summary, k.suggested_tags, k.suggested_category,
+                   k.suggested_content,
+                   k.final_title, k.final_summary, k.final_tags, k.final_category, k.final_content,
+                   k.status, k.created_at, k.updated_at
+            FROM knowledge_items k
+            WHERE k.status = 'confirmed'
+              AND k.final_category = :category
+              AND (
+                k.final_title ILIKE '%' || :keyword || '%' OR
+                k.final_summary ILIKE '%' || :keyword || '%' OR
+                k.final_content ILIKE '%' || :keyword || '%' OR
+                k.original_title ILIKE '%' || :keyword || '%' OR
+                k.original_content ILIKE '%' || :keyword || '%' OR
+                EXISTS (
+                    SELECT 1 FROM unnest(COALESCE(k.final_tags, ARRAY[]::text[])) AS tag
+                    WHERE tag ILIKE '%' || :keyword || '%'
+                )
+            )
+            ORDER BY k.created_at DESC
+            """,
+            countQuery = """
+            SELECT count(*) FROM knowledge_items k
+            WHERE k.status = 'confirmed'
+              AND k.final_category = :category
+              AND (
+                k.final_title ILIKE '%' || :keyword || '%' OR
+                k.final_summary ILIKE '%' || :keyword || '%' OR
+                k.final_content ILIKE '%' || :keyword || '%' OR
+                k.original_title ILIKE '%' || :keyword || '%' OR
+                k.original_content ILIKE '%' || :keyword || '%' OR
+                EXISTS (
+                    SELECT 1 FROM unnest(COALESCE(k.final_tags, ARRAY[]::text[])) AS tag
+                    WHERE tag ILIKE '%' || :keyword || '%'
+                )
+            )
+            """,
+            nativeQuery = true)
+    Page<KnowledgeItem> searchByKeywordAndCategory(
+            @Param("keyword") String keyword,
+            @Param("category") String category,
+            Pageable pageable);
+
+    /** 列出已确认条目（浏览页「全部」），按创建时间倒序 */
     @Query(value = """
             SELECT k.id, k.original_title, k.original_content,
                    k.suggested_title, k.suggested_summary, k.suggested_tags, k.suggested_category,
@@ -63,7 +129,11 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
             FROM knowledge_items k
             WHERE k.status = 'confirmed'
             ORDER BY k.created_at DESC
-            LIMIT :limit
-            """, nativeQuery = true)
-    List<KnowledgeItem> findAllConfirmedOrderByCreatedAtDesc(@Param("limit") int limit);
+            """,
+            countQuery = """
+            SELECT count(*) FROM knowledge_items k
+            WHERE k.status = 'confirmed'
+            """,
+            nativeQuery = true)
+    Page<KnowledgeItem> findAllConfirmedOrderByCreatedAtDesc(Pageable pageable);
 }

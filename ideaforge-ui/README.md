@@ -55,7 +55,7 @@ ideaforge-ui/
 |------|------|------|
 | `/` | `views/HomeView.vue` | 首页：快速入口 + 最近知识 |
 | `/create` | `views/CreateIdeaView.vue` | 文本/文档录入 → AI 整理 → 保存 |
-| `/browse` | `views/BrowseView.vue` | 类别侧栏 + 搜索 + 结果列表 |
+| `/browse` | `views/BrowseView.vue` | 类别侧栏 + 搜索 + 分页结果列表 |
 | `/ideas/:id` | `views/IdeaDetailView.vue` | 详情查看 + Word 导出 |
 | `/settings/categories` | `views/CategoryManageView.vue` | 类别字典增改删（软删除） |
 
@@ -120,7 +120,7 @@ server: {
 | `processIdeaStream()` | `POST /api/ideas/process/stream` | SSE 流式 AI 整理（推荐） |
 | `processIdea()` | `POST /api/ideas/process` | 同步 AI 整理（兼容） |
 | `saveIdea()` | `POST /api/ideas` | 保存 |
-| `searchIdeas({ q, category })` | `GET /api/ideas/search` | 搜索 / 浏览列表 |
+| `searchIdeas({ q, category, page, size })` | `GET /api/ideas/search` | 搜索 / 浏览列表（分页，返回 `{ content, page, totalElements, ... }`） |
 | `getIdeaById(id)` | `GET /api/ideas/{id}` | 详情 |
 | `updateIdea(id, payload)` | `PUT /api/ideas/{id}` | 更新详情（含可选 suggested 字段） |
 | `deleteIdea(id)` | `DELETE /api/ideas/{id}` | 软删除知识条目 |

@@ -62,8 +62,8 @@ const recentItems = ref([])
 
 onMounted(async () => {
   try {
-    const items = await searchIdeas({})
-    recentItems.value = items.slice(0, 5)
+    const { content } = await searchIdeas({ page: 0, size: 5 })
+    recentItems.value = content ?? []
   } catch {
     recentItems.value = []
   }
