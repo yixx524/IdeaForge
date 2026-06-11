@@ -18,7 +18,8 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
     @Query(value = """
             SELECT k.id, k.original_title, k.original_content,
                    k.suggested_title, k.suggested_summary, k.suggested_tags, k.suggested_category,
-                   k.final_title, k.final_summary, k.final_tags, k.final_category,
+                   k.suggested_content,
+                   k.final_title, k.final_summary, k.final_tags, k.final_category, k.final_content,
                    k.status, k.created_at, k.updated_at
             FROM knowledge_items k
             WHERE k.status = 'confirmed' AND k.final_category = :category
@@ -27,18 +28,20 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
     List<KnowledgeItem> findConfirmedByCategory(@Param("category") String category);
 
     /**
-     * V1 关键词搜索：匹配最终标题、摘要、原始标题/正文及标签数组。
+     * V1 关键词搜索：匹配最终标题、摘要、排版正文、原始标题/正文及标签数组。
      * 使用原生 SQL 以支持 PostgreSQL text[] 的 unnest 查询；显式列名避免 embedding 列干扰。
      */
     @Query(value = """
             SELECT k.id, k.original_title, k.original_content,
                    k.suggested_title, k.suggested_summary, k.suggested_tags, k.suggested_category,
-                   k.final_title, k.final_summary, k.final_tags, k.final_category,
+                   k.suggested_content,
+                   k.final_title, k.final_summary, k.final_tags, k.final_category, k.final_content,
                    k.status, k.created_at, k.updated_at
             FROM knowledge_items k
             WHERE k.status = 'confirmed' AND (
                 k.final_title ILIKE '%' || :keyword || '%' OR
                 k.final_summary ILIKE '%' || :keyword || '%' OR
+                k.final_content ILIKE '%' || :keyword || '%' OR
                 k.original_title ILIKE '%' || :keyword || '%' OR
                 k.original_content ILIKE '%' || :keyword || '%' OR
                 EXISTS (
@@ -49,4 +52,18 @@ public interface KnowledgeItemRepository extends JpaRepository<KnowledgeItem, UU
             ORDER BY k.created_at DESC
             """, nativeQuery = true)
     List<KnowledgeItem> searchByKeyword(@Param("keyword") String keyword);
+
+    /** 列出已确认条目（浏览页「全部」），按创建时间倒序，限制条数 */
+    @Query(value = """
+            SELECT k.id, k.original_title, k.original_content,
+                   k.suggested_title, k.suggested_summary, k.suggested_tags, k.suggested_category,
+                   k.suggested_content,
+                   k.final_title, k.final_summary, k.final_tags, k.final_category, k.final_content,
+                   k.status, k.created_at, k.updated_at
+            FROM knowledge_items k
+            WHERE k.status = 'confirmed'
+            ORDER BY k.created_at DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<KnowledgeItem> findAllConfirmedOrderByCreatedAtDesc(@Param("limit") int limit);
 }

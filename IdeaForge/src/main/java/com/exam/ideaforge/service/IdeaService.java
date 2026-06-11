@@ -2,6 +2,7 @@ package com.exam.ideaforge.service;
 
 import com.exam.ideaforge.dto.IdeaResponse;
 import com.exam.ideaforge.dto.IdeaSaveRequest;
+import com.exam.ideaforge.dto.IdeaUpdateRequest;
 import com.exam.ideaforge.entity.ItemStatus;
 import com.exam.ideaforge.entity.KnowledgeItem;
 import com.exam.ideaforge.exception.IdeaNotFoundException;
@@ -38,10 +39,12 @@ public class IdeaService {
         item.setSuggestedSummary(request.getSuggestedSummary());
         item.setSuggestedTags(IdeaMapper.toTagArray(request.getSuggestedTags()));
         item.setSuggestedCategory(request.getSuggestedCategory());
+        item.setSuggestedContent(request.getSuggestedContent());
         item.setFinalTitle(request.getFinalTitle().trim());
         item.setFinalSummary(request.getFinalSummary());
         item.setFinalTags(IdeaMapper.toTagArray(request.getFinalTags()));
         item.setFinalCategory(request.getFinalCategory().trim().toUpperCase());
+        item.setFinalContent(resolveFinalContentForSave(request));
         item.setStatus(ItemStatus.CONFIRMED);
 
         KnowledgeItem saved = repository.save(item);
@@ -53,5 +56,37 @@ public class IdeaService {
         KnowledgeItem item = repository.findById(id)
                 .orElseThrow(() -> new IdeaNotFoundException("知识条目不存在：" + id));
         return IdeaMapper.toResponse(item);
+    }
+
+    /** 更新已确认条目的最终字段，不修改原始与 AI 建议字段 */
+    @Transactional
+    public IdeaResponse update(UUID id, IdeaUpdateRequest request) {
+        categoryService.validateEnabledCategory(request.getFinalCategory());
+
+        KnowledgeItem item = repository.findById(id)
+                .orElseThrow(() -> new IdeaNotFoundException("知识条目不存在：" + id));
+
+        item.setFinalTitle(request.getFinalTitle().trim());
+        item.setFinalSummary(request.getFinalSummary());
+        item.setFinalTags(IdeaMapper.toTagArray(request.getFinalTags()));
+        item.setFinalCategory(request.getFinalCategory().trim().toUpperCase());
+        item.setFinalContent(resolveFinalContentForUpdate(request));
+
+        KnowledgeItem saved = repository.save(item);
+        return IdeaMapper.toResponse(saved);
+    }
+
+    private static String resolveFinalContentForSave(IdeaSaveRequest request) {
+        if (request.getFinalContent() != null && !request.getFinalContent().isBlank()) {
+            return request.getFinalContent().trim();
+        }
+        return request.getOriginalContent().trim();
+    }
+
+    private static String resolveFinalContentForUpdate(IdeaUpdateRequest request) {
+        if (request.getFinalContent() != null && !request.getFinalContent().isBlank()) {
+            return request.getFinalContent().trim();
+        }
+        return null;
     }
 }

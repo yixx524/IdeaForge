@@ -75,10 +75,16 @@ class IdeaSearchServiceTest {
     }
 
     @Test
-    void search_returnsEmptyWhenNoKeywordAndNoCategory() {
-        assertThat(searchService.search(null, null)).isEmpty();
-        assertThat(searchService.search("", null)).isEmpty();
-        assertThat(searchService.search("  ", null)).isEmpty();
+    void search_noFilters_returnsAllConfirmedUpToLimit() {
+        KnowledgeItem item = buildItem(UUID.randomUUID(), "最近条目", "LIFE", OffsetDateTime.now());
+        when(repository.findAllConfirmedOrderByCreatedAtDesc(IdeaSearchService.DEFAULT_LIST_LIMIT))
+                .thenReturn(List.of(item));
+
+        var results = searchService.search(null, null);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().getFinalTitle()).isEqualTo("最近条目");
+        verify(repository).findAllConfirmedOrderByCreatedAtDesc(IdeaSearchService.DEFAULT_LIST_LIMIT);
     }
 
     private static KnowledgeItem buildItem(UUID id, String title, String category, OffsetDateTime createdAt) {

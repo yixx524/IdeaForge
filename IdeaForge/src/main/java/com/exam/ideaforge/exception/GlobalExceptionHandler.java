@@ -45,6 +45,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(DocumentParseException.class)
+    public ResponseEntity<ErrorResponse> handleDocumentParse(DocumentParseException ex) {
+        log.warn("文档解析失败: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    }
+
     @ExceptionHandler(IdeaProcessingException.class)
     public ResponseEntity<ErrorResponse> handleProcessing(IdeaProcessingException ex) {
         log.error("AI 处理异常: {}", ex.getMessage(), ex);

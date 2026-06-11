@@ -22,7 +22,7 @@ src/main/java/com/exam/ideaforge/
 ├── entity/                      # KnowledgeItem、IdeaCategoryEntity、ItemStatus
 ├── repository/                  # KnowledgeItemRepository、IdeaCategoryRepository
 ├── dto/                         # 请求 / 响应 DTO
-├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService
+├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService、DocumentParseService、IdeaExportService
 ├── controller/                  # HealthController、IdeaController、CategoryController
 ├── config/                      # WebConfig（CORS）
 └── exception/                   # GlobalExceptionHandler
@@ -100,8 +100,11 @@ cd IdeaForge
 |------|------|------|------|
 | POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成 |
 | POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
-| GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 可选类别筛选（`category=WORK` 等） | 已完成 |
+| GET | `/api/ideas/search?q=&category=` | 关键词搜索 + 类别筛选；无参数时返回最近 100 条 | 已完成 |
 | GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
+| PUT | `/api/ideas/{id}` | 更新最终标题/摘要/标签/类别/排版正文 | 已完成 |
+| POST | `/api/ideas/parse-document` | 上传 `.docx`/`.pdf`，提取文本（multipart `file`） | 已完成 |
+| GET | `/api/ideas/{id}/export/docx` | 导出单条为 Word 文档（排版分段） | 已完成 |
 
 ### 类别字典 API
 
@@ -140,6 +143,8 @@ cd IdeaForge
 - `spring-boot-starter-validation` — 参数校验
 - `spring-ai-starter-model-deepseek` — DeepSeek 集成
 - `postgresql` — 数据库驱动
+- `poi-ooxml` — Word 读写（文档解析与导出）
+- `pdfbox` — PDF 文本提取
 
 > pgvector 相关依赖已在 V1 移除，语义搜索留待 V2 再引入。
 

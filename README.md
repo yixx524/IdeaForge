@@ -18,6 +18,16 @@
 
 ## 项目简介
 
+**V1.5 新增能力：**
+
+1. **首页**（`/`）— 快速录入 / 浏览入口，展示最近知识
+2. **浏览**（`/browse`）— 左侧类别导航 + 关键词搜索 + 可点击结果列表
+3. **详情**（`/ideas/:id`）— 查看完整条目，支持导出 Word
+4. **文档上传** — 录入页支持 `.docx` / `.pdf`，解析后填入表单再走 AI 整理
+5. **Word 导出** — 详情页一键下载结构化 `.docx`
+6. **详情编辑** — 详情页可编辑标题、摘要、标签、类别、排版正文
+7. **AI 正文排版** — AI 整理时输出排版后的 `final_content`（`##` 标题、`-` 列表、空行分段）
+
 **V1 核心流程：**
 
 1. 用户上传原始想法（标题 + 正文）
@@ -35,10 +45,15 @@
 | 前端脚手架 | 已完成（`ideaforge-ui`，Vue 3 + Vite 8） |
 | 前后端联调 | 已完成（Vite proxy、全链路 API 测试通过） |
 | 后端业务 | 已完成（Entity / Repository / DTO / Service / Controller / 异常处理） |
-| 前端业务 | 已完成（vue-router、axios、`CreateIdeaView`、`SearchView`） |
-| 前端 UI | 已完成（logo 品牌色设计系统、步骤指示器、搜索卡片动效） |
+| 前端业务 | 已完成（vue-router、axios、各 View + components） |
+| 前端 UI | 已完成（首页、侧栏类别导航、共享设计系统） |
 | V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
-| 标签/类别搜索 | 已修复（关键词与类别分离；类别用筛选下拉框） |
+| V1.5 浏览与详情 | 已完成（首页、BrowseView、IdeaDetailView、左侧类别导航） |
+| V1.5 文档上传 | 已完成（`.docx` / `.pdf` 解析 → 录入页填充 → AI 整理） |
+| V1.5 Word 导出 | 已完成（详情页导出 `.docx`，排版分段） |
+| V1.6 详情编辑 | 已完成（PUT 更新最终字段） |
+| V1.6 AI 正文排版 | 已完成（`final_content` + 轻量 Markdown） |
+| 标签/类别搜索 | 已修复（关键词与类别分离；类别用侧栏筛选） |
 | 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
@@ -49,7 +64,8 @@ IdeaForge-v/
 ├── README.md                 # 本文件（项目总览 + 全局规范）
 ├── db/
 │   ├── public.sql            # VM 数据库参考脚本
-│   └── migrate_idea_categories.sql  # 类别字典表迁移脚本
+│   ├── migrate_idea_categories.sql  # 类别字典表迁移脚本
+│   └── migrate_final_content.sql    # 排版正文字段迁移
 ├── IdeaForge/                # 后端（Spring Boot）
 │   ├── README.md             # 后端专项说明
 │   └── src/main/java/com/exam/ideaforge/
@@ -165,8 +181,11 @@ flowchart TB
 - `status` 字段数据库存储小写（`pending` / `confirmed`），通过 `ItemStatusConverter` 映射
 - `logo.png` 体积较大（约 4.6 MB），后续可压缩以加快首屏加载
 - 类别改由 PostgreSQL 表 `idea_categories` 维护，前端「类别管理」页可增改删（软删除）；**部署前须在 VM 执行** [`db/migrate_idea_categories.sql`](db/migrate_idea_categories.sql)（或参考 `public.sql`），否则应用启动 validate 失败
+- **排版正文字段**：须执行 [`db/migrate_final_content.sql`](db/migrate_final_content.sql) 添加 `suggested_content` / `final_content` 列
 - 类别 `code` 创建后不可修改；软删除（`enabled=false`）后管理页不再显示，历史条目保留；后期可在 DB 手动 `DELETE` 硬删
-- 类别筛选：搜索页下拉框选择类别；关键词搜索框不再匹配类别（避免「工作」误命中「正常工作」）
+- 类别筛选：浏览页**左侧类别导航**（全部 + 各类别）；关键词搜索框不再匹配类别
+- 文档上传：扫描版 PDF 无法提取文字；单文件上限 10MB
+- 浏览「全部」默认返回最近 100 条已确认条目
 - 标签搜索依赖 `final_tags` 正确入库；旧数据若 `final_tags` 为 NULL，需重新保存或手动补数据
 
 ## 环境要求
@@ -227,12 +246,16 @@ npm run dev
 
 ## V1 功能范围
 
-| 功能 | V1 | V2（规划） |
-|------|-----|-----------|
+| 功能 | V1 / V1.5 | V2（规划） |
+|------|-----------|-----------|
 | AI 整理 | DeepSeek `deepseek-v4-pro` | 同左，可优化 Prompt |
 | 数据持久化 | PostgreSQL + JPA | 同左 |
-| 搜索 | 关键词匹配（LIKE） | pgvector 语义搜索 |
+| 搜索 | 关键词匹配（LIKE）+ 类别侧栏 | pgvector 语义搜索 |
 | 类别管理 | DB 字典 + 前端 CRUD | 同左 |
+| 文档导入 | `.docx` / `.pdf` 文本提取 | 可扩展 OCR |
+| Word 导出 | 单条详情导出排版 `.docx` | 批量导出 |
+| 详情编辑 | PUT 更新最终字段 | 同左 |
+| 正文排版 | AI 生成 + 轻量 Markdown 存储 | 富文本编辑器 |
 | Embedding 模型 | 不需要 | 需额外接入 |
 
 ## 相关文档

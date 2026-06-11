@@ -1,4 +1,4 @@
-<!-- 根布局壳：顶部导航 + 路由出口，不含具体页面业务 -->
+<!-- 根布局壳：顶部导航 + 可选侧栏区 + 主内容，不含具体页面业务 -->
 <template>
   <div class="app">
     <header class="header">
@@ -10,24 +10,31 @@
         </div>
       </RouterLink>
       <nav class="nav">
-        <RouterLink to="/" class="nav-link">
-          <span class="nav-icon">✎</span>
-          录入想法
+        <RouterLink to="/" end class="nav-link">
+          <span class="nav-icon">⌂</span>
+          首页
         </RouterLink>
-        <RouterLink to="/search" class="nav-link">
+        <RouterLink to="/browse" class="nav-link">
           <span class="nav-icon">⌕</span>
-          搜索知识
+          浏览
+        </RouterLink>
+        <RouterLink to="/create" class="nav-link">
+          <span class="nav-icon">✎</span>
+          录入
         </RouterLink>
         <RouterLink to="/settings/categories" class="nav-link">
           <span class="nav-icon">⚙</span>
-          类别管理
+          设置
         </RouterLink>
       </nav>
     </header>
 
-    <main class="main">
-      <RouterView />
-    </main>
+    <div class="body-row" :class="{ 'with-sidebar': showSidebar }">
+      <CategorySidebar v-if="showSidebar" />
+      <main class="main">
+        <RouterView />
+      </main>
+    </div>
 
     <footer class="footer">
       <p>由 DeepSeek 智能整理 · 安全存储于 PostgreSQL</p>
@@ -36,13 +43,23 @@
 </template>
 
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+import CategorySidebar from '@/components/CategorySidebar.vue'
 import logoUrl from '@/assets/logo.png'
+
+const route = useRoute()
+
+/** 浏览页与详情页将显示左侧类别导航（Phase 2 接入 CategorySidebar） */
+const showSidebar = computed(() => {
+  const name = route.name
+  return name === 'browse' || name === 'idea-detail'
+})
 </script>
 
 <style scoped>
 .app {
-  max-width: 760px;
+  max-width: var(--layout-max-width);
   margin: 0 auto;
   padding: 1.5rem 1.25rem 2.5rem;
   min-height: 100vh;
@@ -55,7 +72,7 @@ import logoUrl from '@/assets/logo.png'
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
   padding: 1rem 1.25rem;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
@@ -100,7 +117,8 @@ import logoUrl from '@/assets/logo.png'
 
 .nav {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  flex-wrap: wrap;
 }
 
 .nav-link {
@@ -111,7 +129,7 @@ import logoUrl from '@/assets/logo.png'
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.875rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   transition:
@@ -137,8 +155,26 @@ import logoUrl from '@/assets/logo.png'
   font-weight: 600;
 }
 
+.body-row {
+  flex: 1;
+  display: flex;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.body-row.with-sidebar .main {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .body-row.with-sidebar {
+    flex-direction: column;
+  }
+}
+
 .main {
   flex: 1;
+  min-width: 0;
 }
 
 .footer {
@@ -152,7 +188,7 @@ import logoUrl from '@/assets/logo.png'
   opacity: 0.7;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .header {
     flex-direction: column;
     align-items: stretch;

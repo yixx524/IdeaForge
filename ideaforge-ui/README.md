@@ -1,6 +1,6 @@
 # IdeaForge 前端
 
-Vue 3 + Vite 前端模块，提供想法录入、AI 整理结果编辑确认、关键词搜索等页面。
+Vue 3 + Vite 前端模块，提供首页、想法录入、浏览搜索、详情查看、类别管理等页面。
 
 全局开发规范见 [项目根 README](../README.md)。
 
@@ -27,7 +27,7 @@ ideaforge-ui/
 ├── package.json
 └── src/
     ├── main.js              # 应用入口（注册 router）
-    ├── App.vue              # 根布局壳（导航 + router-view）
+    ├── App.vue              # 根布局壳（导航 + 侧栏 + router-view）
     ├── assets/              # 静态资源（css、图片）
     ├── api/                 # 后端 HTTP 封装
     │   ├── http.js          # axios 实例
@@ -36,16 +36,23 @@ ideaforge-ui/
     │   └── category.js      # 类别字典接口
     ├── router/              # 路由定义
     ├── views/               # 页面级组件
-    ├── constants/           # 共享常量（类别枚举等）
-    └── components/          # 可复用 UI 组件（当前为空）
+    ├── constants/           # 共享常量
+    └── components/          # 可复用 UI 组件
+        ├── AppCard.vue
+        ├── CategoryBadge.vue
+        ├── CategorySidebar.vue
+        ├── FileUploadZone.vue
+        └── IdeaResultCard.vue
 ```
 
 ### 页面
 
 | 路由 | 文件 | 功能 |
 |------|------|------|
-| `/` | `views/CreateIdeaView.vue` | 输入原始文本 → AI 整理 → 编辑 → 保存 |
-| `/search` | `views/SearchView.vue` | 关键词搜索 + 结果列表 |
+| `/` | `views/HomeView.vue` | 首页：快速入口 + 最近知识 |
+| `/create` | `views/CreateIdeaView.vue` | 文本/文档录入 → AI 整理 → 保存 |
+| `/browse` | `views/BrowseView.vue` | 类别侧栏 + 搜索 + 结果列表 |
+| `/ideas/:id` | `views/IdeaDetailView.vue` | 详情查看 + Word 导出 |
 | `/settings/categories` | `views/CategoryManageView.vue` | 类别字典增改删（软删除） |
 
 ## 各目录职责
@@ -57,7 +64,7 @@ ideaforge-ui/
 | `router/` | 路由 | path 与 component 映射 | 业务逻辑 |
 | `api/` | HTTP 封装 | axios 请求、URL 常量 | DOM 操作 |
 | `assets/` | 静态资源 | css、图片 | JS 逻辑 |
-| `App.vue` | 根布局 | 导航、`<router-view>` | 页面业务 |
+| `App.vue` | 根布局 | 导航、侧栏、`<router-view>` | 页面业务 |
 | `main.js` | 入口 | createApp、插件注册 | 业务代码 |
 
 详细规范见 [根 README 前端目录职责](../README.md#前端目录职责ideaforge-uidsrc)。
@@ -106,14 +113,16 @@ server: {
 
 | 前端调用 | 后端接口 | 说明 |
 |----------|----------|------|
-| `api/idea.js → processIdea()` | `POST /api/ideas/process` | AI 整理 |
-| `api/idea.js → saveIdea()` | `POST /api/ideas` | 保存 |
-| `api/idea.js → searchIdeas({ q, category })` | `GET /api/ideas/search?q=&category=` | 搜索 + 类别筛选 |
-| `api/category.js → listCategories()` | `GET /api/categories` | 获取 enabled 类别 |
-| `api/category.js → listCategories({ all: true })` | `GET /api/categories?all=true` | 含已软删除类别（搜索页 label） |
-| `api/category.js → createCategory()` | `POST /api/categories` | 新增类别 |
-| `api/category.js → updateCategory()` | `PUT /api/categories/{id}` | 更新类别 |
-| `api/category.js → deleteCategory()` | `DELETE /api/categories/{id}` | 软删除 |
+| `processIdea()` | `POST /api/ideas/process` | AI 整理 |
+| `saveIdea()` | `POST /api/ideas` | 保存 |
+| `searchIdeas({ q, category })` | `GET /api/ideas/search` | 搜索 / 浏览列表 |
+| `getIdeaById(id)` | `GET /api/ideas/{id}` | 详情 |
+| `updateIdea(id, payload)` | `PUT /api/ideas/{id}` | 更新详情 |
+| `parseDocument(file)` | `POST /api/ideas/parse-document` | 文档解析 |
+| `exportIdeaDocx(id)` | `GET /api/ideas/{id}/export/docx` | Word 导出 |
+| `listCategories()` | `GET /api/categories` | enabled 类别 |
+| `listCategories({ all: true })` | `GET /api/categories?all=true` | 含已软删除 |
+| CRUD in `category.js` | `/api/categories` | 类别管理 |
 
 ## 相关文档
 

@@ -7,21 +7,10 @@ import lombok.Setter;
 
 import java.util.List;
 
-/** POST /api/ideas 请求体：包含原始、AI 建议与用户最终确认的完整数据 */
+/** PUT /api/ideas/{id} 请求体：更新用户确认后的最终字段 */
 @Getter
 @Setter
-public class IdeaSaveRequest {
-
-    private String originalTitle;
-
-    @NotBlank(message = "原始正文不能为空")
-    private String originalContent;
-
-    private String suggestedTitle;
-    private String suggestedSummary;
-    private List<String> suggestedTags;
-    private String suggestedCategory;
-    private String suggestedContent;
+public class IdeaUpdateRequest {
 
     @NotBlank(message = "最终标题不能为空")
     private String finalTitle;

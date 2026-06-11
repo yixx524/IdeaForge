@@ -15,6 +15,8 @@ import java.util.List;
 @Service
 public class IdeaSearchService {
 
+    static final int DEFAULT_LIST_LIMIT = 100;
+
     private final KnowledgeItemRepository repository;
 
     public IdeaSearchService(KnowledgeItemRepository repository) {
@@ -26,11 +28,14 @@ public class IdeaSearchService {
         boolean hasKeyword = keyword != null && !keyword.isBlank();
         boolean hasCategory = category != null && !category.isBlank();
 
+        List<KnowledgeItem> items;
         if (!hasKeyword && !hasCategory) {
-            return List.of();
+            items = repository.findAllConfirmedOrderByCreatedAtDesc(DEFAULT_LIST_LIMIT);
+            return items.stream()
+                    .map(IdeaMapper::toResponse)
+                    .toList();
         }
 
-        List<KnowledgeItem> items;
         if (hasKeyword && hasCategory) {
             String trimmedKeyword = keyword.trim();
             String normalizedCategory = category.trim().toUpperCase();

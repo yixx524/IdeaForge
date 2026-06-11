@@ -14,4 +14,5 @@ public class IdeaProcessResponse {
     private final String suggestedSummary;
     private final List<String> suggestedTags;
     private final String suggestedCategory;
+    private final String suggestedContent;
 }

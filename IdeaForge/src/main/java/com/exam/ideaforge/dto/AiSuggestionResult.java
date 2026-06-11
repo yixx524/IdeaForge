@@ -9,6 +9,7 @@ public record AiSuggestionResult(
         @JsonProperty("suggestedTitle") String suggestedTitle,
         @JsonProperty("suggestedSummary") String suggestedSummary,
         @JsonProperty("suggestedTags") List<String> suggestedTags,
-        @JsonProperty("suggestedCategory") String suggestedCategory
+        @JsonProperty("suggestedCategory") String suggestedCategory,
+        @JsonProperty("suggestedContent") String suggestedContent
 ) {
 }

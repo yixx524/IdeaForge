@@ -54,6 +54,9 @@ public class KnowledgeItem {
     @Column(name = "suggested_category", length = 20)
     private String suggestedCategory;
 
+    @Column(name = "suggested_content", columnDefinition = "text")
+    private String suggestedContent;
+
     // --- 用户确认后的最终字段（搜索与展示使用这组数据） ---
     @Column(name = "final_title", nullable = false)
     private String finalTitle;
@@ -67,6 +70,9 @@ public class KnowledgeItem {
 
     @Column(name = "final_category", nullable = false, length = 20)
     private String finalCategory;
+
+    @Column(name = "final_content", columnDefinition = "text")
+    private String finalContent;
 
     /** 数据库存小写值（pending/confirmed），由 ItemStatusConverter 转换 */
     @Convert(converter = ItemStatusConverter.class)

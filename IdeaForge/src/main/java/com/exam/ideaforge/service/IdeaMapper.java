@@ -25,8 +25,16 @@ final class IdeaMapper {
                 .finalSummary(item.getFinalSummary())
                 .finalTags(toTagList(item.getFinalTags()))
                 .finalCategory(item.getFinalCategory())
+                .finalContent(resolveFinalContent(item))
                 .createdAt(item.getCreatedAt())
                 .build();
+    }
+
+    static String resolveFinalContent(KnowledgeItem item) {
+        if (item.getFinalContent() != null && !item.getFinalContent().isBlank()) {
+            return item.getFinalContent();
+        }
+        return item.getOriginalContent();
     }
 
     static String[] toTagArray(List<String> tags) {

@@ -19,5 +19,6 @@ public class IdeaResponse {
     private final String finalSummary;
     private final List<String> finalTags;
     private final String finalCategory;
+    private final String finalContent;
     private final OffsetDateTime createdAt;
 }

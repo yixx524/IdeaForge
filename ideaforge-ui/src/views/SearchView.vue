@@ -49,9 +49,7 @@
       <article v-for="item in results" :key="item.id" class="result-card">
         <header class="result-header">
           <h3>{{ item.finalTitle }}</h3>
-          <span class="badge" :class="`badge-${item.finalCategory?.toLowerCase()}`">
-            {{ resolveLabel(item.finalCategory) }}
-          </span>
+          <CategoryBadge :code="item.finalCategory" :label="resolveLabel(item.finalCategory)" />
         </header>
         <p v-if="item.finalSummary" class="summary">{{ item.finalSummary }}</p>
         <div v-if="item.finalTags?.length" class="tags">
@@ -83,6 +81,7 @@ import { onMounted, ref } from 'vue'
 import { searchIdeas } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
+import CategoryBadge from '@/components/CategoryBadge.vue'
 
 const keyword = ref('')
 const category = ref('')
@@ -318,40 +317,6 @@ button:disabled {
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.4;
-}
-
-.badge {
-  padding: 0.2rem 0.625rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.badge-work {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.badge-study {
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.badge-life {
-  background: #fdf4ff;
-  color: #a21caf;
-}
-
-.badge-inspiration {
-  background: linear-gradient(135deg, rgba(26, 74, 110, 0.1), rgba(217, 160, 91, 0.15));
-  color: var(--color-primary);
-}
-
-.badge-todo {
-  background: #fff7ed;
-  color: #c2410c;
 }
 
 .summary {

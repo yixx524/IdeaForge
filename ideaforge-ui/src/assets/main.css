@@ -22,6 +22,8 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --transition: 0.2s ease;
+  --layout-max-width: 1200px;
+  --sidebar-width: 240px;
 }
 
 *,
@@ -81,4 +83,231 @@ button:not(:disabled):hover {
 
 button:not(:disabled):active {
   transform: translateY(0);
+}
+
+/* ---- 页面布局 ---- */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ---- 卡片 ---- */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.card-flat {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  padding: 1.5rem 1.5rem 0;
+}
+
+.card-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 0.375rem;
+}
+
+.card-hint {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.card-footer {
+  padding: 1.5rem;
+  margin-top: 0;
+  border-top: 1px solid var(--color-border);
+  background: rgba(240, 244, 248, 0.5);
+}
+
+/* ---- 表单字段 ---- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.field-label {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.field-optional {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* ---- 按钮 ---- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(26, 74, 110, 0.25);
+  white-space: nowrap;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  box-shadow: 0 4px 12px rgba(26, 74, 110, 0.35);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-secondary:not(:disabled):hover {
+  background: var(--color-bg);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-danger:not(:disabled):hover {
+  background: #fee2e2;
+  border-color: var(--color-error);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ---- 提示消息 ---- */
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.toast-success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.toast-error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+/* ---- 加载动画 ---- */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn-secondary .spinner,
+.btn-danger .spinner {
+  border-color: rgba(26, 74, 110, 0.15);
+  border-top-color: var(--color-primary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- 类别 badge ---- */
+.badge {
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- 过渡动画 ---- */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  color: var(--color-border);
+  margin-bottom: 0.75rem;
+}
+
+.empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.375rem;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }

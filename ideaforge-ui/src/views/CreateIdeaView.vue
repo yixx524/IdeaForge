@@ -18,7 +18,19 @@
     <section v-if="step === 'input'" class="card">
       <div class="card-header">
         <h2>录入想法</h2>
-        <p class="hint">输入原始标题与正文，由 AI 整理为结构化信息</p>
+        <p class="hint">输入原始标题与正文，或上传 Word / PDF 文档，由 AI 整理为结构化信息</p>
+      </div>
+
+      <FileUploadZone
+        :loading="parsing"
+        :file-name="uploadedFileName"
+        :char-count="uploadedCharCount"
+        @select="handleFileUpload"
+        @clear="clearUpload"
+      />
+
+      <div class="input-divider">
+        <span>或手动输入</span>
       </div>
 
       <label class="field">
@@ -80,6 +92,16 @@
         </select>
       </label>
 
+      <label class="field">
+        <span class="label">排版正文</span>
+        <textarea
+          v-model="finalForm.content"
+          rows="12"
+          placeholder="AI 排版后的正文，支持 ## 标题与 - 列表"
+        />
+        <span class="field-hint">空行分段；## 小节标题；- 列表项</span>
+      </label>
+
       <div class="card-footer actions">
         <button type="button" class="btn-secondary" :disabled="loading" @click="handleBack">
           返回修改
@@ -92,26 +114,30 @@
     </section>
 
     <Transition name="fade">
-      <p v-if="error" class="toast error">{{ error }}</p>
+      <p v-if="error" class="toast toast-error">{{ error }}</p>
     </Transition>
     <Transition name="fade">
-      <p v-if="success" class="toast success">{{ success }}</p>
+      <p v-if="success" class="toast toast-success">{{ success }}</p>
     </Transition>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { processIdea, saveIdea } from '@/api/idea'
+import { parseDocument, processIdea, saveIdea } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { toCategoryOptions } from '@/constants/categories'
+import FileUploadZone from '@/components/FileUploadZone.vue'
 
 /** 当前步骤：input 录入 | review 确认 */
 const step = ref('input')
 const loading = ref(false)
+const parsing = ref(false)
 const error = ref(null)
 const success = ref(null)
 const categories = ref([])
+const uploadedFileName = ref('')
+const uploadedCharCount = ref(0)
 
 /** 用户原始输入 */
 const original = reactive({
@@ -125,6 +151,7 @@ const suggestion = reactive({
   suggestedSummary: '',
   suggestedTags: [],
   suggestedCategory: '',
+  suggestedContent: '',
 })
 
 /** 用户编辑后的最终字段（tagsText 为逗号分隔字符串，提交前转为数组） */
@@ -133,6 +160,7 @@ const finalForm = reactive({
   summary: '',
   tagsText: '',
   category: '',
+  content: '',
 })
 
 onMounted(async () => {
@@ -153,6 +181,39 @@ function parseTags(text) {
   return text.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean)
 }
 
+async function handleFileUpload({ file, error: uploadError }) {
+  if (uploadError) {
+    error.value = uploadError
+    return
+  }
+  if (!file) return
+
+  parsing.value = true
+  error.value = null
+  success.value = null
+
+  try {
+    const result = await parseDocument(file)
+    uploadedFileName.value = result.fileName ?? file.name
+    uploadedCharCount.value = result.charCount ?? result.extractedContent?.length ?? 0
+    original.content = result.extractedContent ?? ''
+    if (result.extractedTitle && !original.title.trim()) {
+      original.title = result.extractedTitle
+    }
+    success.value = `已从「${uploadedFileName.value}」提取文本，请核对后点击 AI 整理`
+  } catch (e) {
+    error.value = e.message
+    clearUpload()
+  } finally {
+    parsing.value = false
+  }
+}
+
+function clearUpload() {
+  uploadedFileName.value = ''
+  uploadedCharCount.value = 0
+}
+
 /** 调用 POST /api/ideas/process，成功后切换到 review 步骤 */
 async function handleProcess() {
   if (!original.content.trim()) {
@@ -171,10 +232,12 @@ async function handleProcess() {
     })
 
     Object.assign(suggestion, result)
+    suggestion.suggestedContent = result.suggestedContent ?? ''
     finalForm.title = result.suggestedTitle ?? ''
     finalForm.summary = result.suggestedSummary ?? ''
     finalForm.tagsText = (result.suggestedTags ?? []).join('，')
     finalForm.category = result.suggestedCategory ?? finalForm.category ?? categories.value[0]?.value ?? ''
+    finalForm.content = result.suggestedContent ?? original.content.trim()
     step.value = 'review'
   } catch (e) {
     error.value = e.message
@@ -202,16 +265,19 @@ async function handleSave() {
       suggestedSummary: suggestion.suggestedSummary,
       suggestedTags: suggestion.suggestedTags,
       suggestedCategory: suggestion.suggestedCategory,
+      suggestedContent: suggestion.suggestedContent,
       finalTitle: finalForm.title.trim(),
       finalSummary: finalForm.summary.trim() || null,
       finalTags: parseTags(finalForm.tagsText),
       finalCategory: finalForm.category,
+      finalContent: finalForm.content.trim() || original.content.trim(),
     })
 
     success.value = `已保存：${saved.finalTitle}`
     step.value = 'input'
     original.title = ''
     original.content = ''
+    clearUpload()
   } catch (e) {
     error.value = e.message
   } finally {
@@ -316,6 +382,23 @@ function handleBack() {
 .hint {
   color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.input-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.input-divider::before,
+.input-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
 }
 
 .ai-badge {
@@ -462,25 +545,7 @@ button:disabled {
   to { transform: rotate(360deg); }
 }
 
-/* 提示消息 */
-.toast {
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.success {
-  color: var(--color-success);
-  background: var(--color-success-bg);
-  border: 1px solid rgba(5, 150, 105, 0.2);
-}
-
-.error {
-  color: var(--color-error);
-  background: var(--color-error-bg);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-}
+/* 提示消息 — 样式见 main.css .toast-* */
 
 .fade-enter-active,
 .fade-leave-active {
