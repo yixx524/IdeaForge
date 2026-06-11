@@ -8,13 +8,18 @@
   <p v-else class="rich-text-empty">（无正文）</p>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { sanitizeHtml, toDisplayHtml } from '@/utils/contentHtml'
 
-const props = defineProps({
-  content: { type: String, default: '' },
-})
+const props = withDefaults(
+  defineProps<{
+    content?: string
+  }>(),
+  {
+    content: '',
+  },
+)
 
 const safeHtml = computed(() => {
   const html = toDisplayHtml(props.content)

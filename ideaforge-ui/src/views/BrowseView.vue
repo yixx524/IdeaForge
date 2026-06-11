@@ -8,28 +8,23 @@
       </div>
 
       <div class="search-bar">
-        <div class="search-input-wrap">
-          <span class="search-icon">⌕</span>
-          <input
-            v-model="keyword"
-            type="search"
-            placeholder="输入关键词…"
-            @keyup.enter="applySearch"
-          />
-        </div>
-        <button type="button" class="btn-primary" :disabled="loading" @click="applySearch">
-          <span v-if="loading" class="spinner" />
+        <ElInput
+          v-model="keyword"
+          type="search"
+          placeholder="输入关键词…"
+          clearable
+          class="search-input"
+          @keyup.enter="applySearch"
+        >
+          <template #prefix>
+            <span class="search-icon">⌕</span>
+          </template>
+        </ElInput>
+        <ElButton type="primary" :loading="loading" @click="applySearch">
           {{ loading ? '加载中…' : '搜索' }}
-        </button>
+        </ElButton>
       </div>
     </section>
-
-    <Transition name="fade">
-      <p v-if="error" class="toast toast-error">{{ error }}</p>
-    </Transition>
-    <Transition name="fade">
-      <p v-if="success" class="toast toast-success">{{ success }}</p>
-    </Transition>
 
     <div v-if="totalElements > 0" class="results-meta">
       共 <strong>{{ totalElements }}</strong> 条
@@ -48,63 +43,44 @@
       />
     </section>
 
-    <nav v-if="totalPages > 1" class="pagination" aria-label="分页导航">
-      <button
-        type="button"
-        class="pagination-btn"
-        :disabled="loading || !hasPrevious"
-        @click="goToPage(currentPage - 1)"
-      >
-        上一页
-      </button>
-      <span class="pagination-info">{{ currentPage + 1 }} / {{ totalPages }}</span>
-      <button
-        type="button"
-        class="pagination-btn"
-        :disabled="loading || !hasNext"
-        @click="goToPage(currentPage + 1)"
-      >
-        下一页
-      </button>
-    </nav>
-
-    <div v-if="!loading && loaded && !error && totalElements === 0" class="empty-state">
-      <div class="empty-icon">⌕</div>
-      <p class="empty-title">未找到匹配条目</p>
-      <p class="empty-hint">试试其他关键词或类别，或先去录入新想法</p>
-      <RouterLink to="/create" class="btn-primary empty-action">去录入</RouterLink>
+    <div v-if="totalPages > 1" class="pagination-wrap">
+      <ElPagination
+        v-model:current-page="pageDisplay"
+        :page-size="PAGE_SIZE"
+        :total="totalElements"
+        :disabled="loading"
+        layout="prev, pager, next"
+        background
+        @current-change="onPageChange"
+      />
     </div>
 
-    <div v-else-if="!loading && !loaded && !error" class="empty-state welcome-state">
+    <ElEmpty
+      v-if="!loading && loaded && !error && totalElements === 0"
+      description="未找到匹配条目"
+    >
+      <template #default>
+        <p class="empty-hint">试试其他关键词或类别，或先去录入新想法</p>
+        <RouterLink to="/create">
+          <ElButton type="primary">去录入</ElButton>
+        </RouterLink>
+      </template>
+    </ElEmpty>
+
+    <div v-else-if="!loading && !loaded && !error" class="welcome-state">
       <p>正在加载知识库…</p>
     </div>
-
-    <ConfirmModal
-      :open="!!deleteTarget"
-      title="确认删除"
-      icon="delete"
-      variant="danger"
-      confirm-label="确认删除"
-      loading-label="删除中…"
-      :loading="deleting"
-      hint="删除后浏览页不再显示，数据库记录保留。"
-      @cancel="cancelDelete"
-      @confirm="confirmDelete"
-    >
-      <template #message>
-        确定删除「<strong>{{ deleteTarget?.finalTitle }}</strong>」？
-      </template>
-    </ConfirmModal>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { searchIdeas, deleteIdea } from '@/api/idea'
 import { useCategoryStore } from '@/stores/category'
 import IdeaResultCard from '@/components/IdeaResultCard.vue'
-import ConfirmModal from '@/components/ConfirmModal.vue'
+import { confirmDelete, showError, showSuccess } from '@/utils/message'
+import type { IdeaResponse } from '@/types'
 
 const PAGE_SIZE = 20
 
@@ -114,38 +90,42 @@ const categoryStore = useCategoryStore()
 
 const keyword = ref('')
 const loading = ref(false)
-const deleting = ref(false)
-const error = ref(null)
-const success = ref(null)
-const results = ref([])
+const error = ref<string | null>(null)
+const results = ref<IdeaResponse[]>([])
 const loaded = ref(false)
-const deleteTarget = ref(null)
 const currentPage = ref(0)
 const totalElements = ref(0)
 const totalPages = ref(0)
-const hasNext = ref(false)
-const hasPrevious = ref(false)
+
+const pageDisplay = computed({
+  get: () => currentPage.value + 1,
+  set: () => {},
+})
 
 const activeCategoryLabel = computed(() => {
   const code = route.query.category
-  if (!code) return ''
+  if (!code || typeof code !== 'string') return ''
   return categoryStore.labelOf(code)
 })
 
 watch(
   () => route.query,
-  async (query) => {
-    keyword.value = query.q ?? ''
+  async () => {
+    keyword.value = typeof route.query.q === 'string' ? route.query.q : ''
     await fetchResults()
   },
   { immediate: true },
 )
 
-function resolveLabel(code) {
+watch(error, (msg) => {
+  if (msg) showError(msg)
+})
+
+function resolveLabel(code: string) {
   return categoryStore.labelOf(code)
 }
 
-function parsePage(query) {
+function parsePage(query: Record<string, unknown>): number {
   const raw = query.page
   if (raw == null || raw === '') return 0
   const n = Number.parseInt(String(raw), 10)
@@ -156,9 +136,10 @@ async function fetchResults() {
   loading.value = true
   error.value = null
 
-  const q = (route.query.q ?? keyword.value).trim()
-  const category = route.query.category ?? undefined
-  const page = parsePage(route.query)
+  const q = (typeof route.query.q === 'string' ? route.query.q : keyword.value).trim()
+  const category =
+    typeof route.query.category === 'string' ? route.query.category : undefined
+  const page = parsePage(route.query as Record<string, unknown>)
 
   try {
     const data = await searchIdeas({
@@ -171,11 +152,9 @@ async function fetchResults() {
     currentPage.value = data.page ?? 0
     totalElements.value = data.totalElements ?? 0
     totalPages.value = data.totalPages ?? 0
-    hasNext.value = data.hasNext ?? false
-    hasPrevious.value = data.hasPrevious ?? false
     loaded.value = true
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '加载失败'
     results.value = []
     totalElements.value = 0
     totalPages.value = 0
@@ -186,7 +165,7 @@ async function fetchResults() {
 }
 
 function applySearch() {
-  const query = { ...route.query }
+  const query: Record<string, string> = { ...route.query } as Record<string, string>
   const q = keyword.value.trim()
   if (q) {
     query.q = q
@@ -197,10 +176,10 @@ function applySearch() {
   router.push({ path: '/browse', query })
 }
 
-function goToPage(page) {
+function goToPage(page: number) {
   if (page < 0 || (totalPages.value > 0 && page >= totalPages.value)) return
 
-  const query = { ...route.query }
+  const query: Record<string, string> = { ...route.query } as Record<string, string>
   if (page === 0) {
     delete query.page
   } else {
@@ -209,27 +188,22 @@ function goToPage(page) {
   router.push({ path: '/browse', query })
 }
 
-function requestDelete(item) {
-  deleteTarget.value = item
-  success.value = null
+function onPageChange(pageOneBased: number) {
+  goToPage(pageOneBased - 1)
 }
 
-function cancelDelete() {
-  deleteTarget.value = null
-}
+async function requestDelete(item: IdeaResponse) {
+  const confirmed = await confirmDelete({
+    message: `确定删除「<strong>${item.finalTitle}</strong>」？`,
+    hint: '删除后浏览页不再显示，数据库记录保留。',
+  })
+  if (!confirmed) return
 
-async function confirmDelete() {
-  if (!deleteTarget.value) return
-
-  deleting.value = true
   error.value = null
-  success.value = null
-  const { id, finalTitle } = deleteTarget.value
 
   try {
-    await deleteIdea(id)
-    deleteTarget.value = null
-    success.value = `已删除：${finalTitle}`
+    await deleteIdea(item.id)
+    showSuccess(`已删除：${item.finalTitle}`)
 
     if (results.value.length === 1 && currentPage.value > 0) {
       goToPage(currentPage.value - 1)
@@ -237,9 +211,7 @@ async function confirmDelete() {
       await fetchResults()
     }
   } catch (e) {
-    error.value = e.message
-  } finally {
-    deleting.value = false
+    error.value = e instanceof Error ? e.message : '删除失败'
   }
 }
 </script>
@@ -253,31 +225,16 @@ async function confirmDelete() {
   display: flex;
   gap: 0.75rem;
   padding: 1rem 1.5rem 1.5rem;
-}
-
-.search-input-wrap {
-  flex: 1;
-  position: relative;
-  display: flex;
   align-items: center;
 }
 
-.search-icon {
-  position: absolute;
-  left: 0.875rem;
-  color: var(--color-text-muted);
-  font-size: 1.125rem;
-  pointer-events: none;
+.search-input {
+  flex: 1;
 }
 
-.search-input-wrap input {
-  width: 100%;
-  padding: 0.625rem 0.875rem 0.625rem 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 0.9375rem;
-  background: var(--color-surface);
-  transition: border-color var(--transition), box-shadow var(--transition);
+.search-icon {
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
 }
 
 .results-meta {
@@ -296,69 +253,30 @@ async function confirmDelete() {
   gap: 0.75rem;
 }
 
-.pagination {
+.pagination-wrap {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 1rem;
   padding: 0.5rem 0 1rem;
 }
 
-.pagination-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-primary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background var(--transition),
-    border-color var(--transition),
-    opacity var(--transition);
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: rgba(26, 74, 110, 0.05);
-  border-color: var(--color-primary);
-}
-
-.pagination-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.pagination-info {
+.empty-hint {
+  margin-bottom: 1rem;
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  min-width: 4rem;
-  text-align: center;
 }
 
 .welcome-state p {
   font-size: 0.9375rem;
   color: var(--color-text-muted);
   opacity: 0.6;
-}
-
-.empty-action {
-  display: inline-flex;
-  margin-top: 1rem;
-  text-decoration: none;
+  text-align: center;
+  padding: 2rem;
 }
 
 @media (max-width: 480px) {
   .search-card .search-bar {
     flex-direction: column;
-  }
-
-  .pagination {
-    gap: 0.75rem;
-  }
-
-  .pagination-btn {
-    flex: 1;
+    align-items: stretch;
   }
 }
 </style>

@@ -24,11 +24,13 @@
       </RouterLink>
     </div>
 
-    <section v-if="recentItems.length" class="recent-section">
-      <div class="recent-header">
-        <h4>最近知识</h4>
-        <RouterLink to="/browse" class="recent-more">查看全部 →</RouterLink>
-      </div>
+    <ElCard v-if="recentItems.length" class="recent-section" shadow="never">
+      <template #header>
+        <div class="recent-header">
+          <h4>最近知识</h4>
+          <RouterLink to="/browse" class="recent-more">查看全部 →</RouterLink>
+        </div>
+      </template>
       <div class="recent-list">
         <RouterLink
           v-for="item in recentItems"
@@ -40,7 +42,7 @@
           <span class="recent-date">{{ formatDate(item.createdAt) }}</span>
         </RouterLink>
       </div>
-    </section>
+    </ElCard>
 
     <section class="tips-card">
       <h4>使用提示</h4>
@@ -53,12 +55,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { searchIdeas } from '@/api/idea'
+import type { IdeaResponse } from '@/types'
 
-const recentItems = ref([])
+const recentItems = ref<IdeaResponse[]>([])
 
 onMounted(async () => {
   try {
@@ -69,7 +72,7 @@ onMounted(async () => {
   }
 })
 
-function formatDate(value) {
+function formatDate(value: string | null | undefined) {
   if (!value) return ''
   return new Date(value).toLocaleDateString('zh-CN')
 }
@@ -165,18 +168,13 @@ function formatDate(value) {
 }
 
 .recent-section {
-  padding: 1.25rem 1.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 .recent-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
 }
 
 .recent-header h4 {

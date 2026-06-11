@@ -1,51 +1,38 @@
 <!-- 知识条目详情页：查看 / 编辑模式 -->
 <template>
   <div class="page detail-page">
-    <div v-if="loading" class="empty-state">
-      <span class="spinner detail-spinner" />
+    <div v-if="loading" class="loading-state" v-loading="true">
       <p>加载中…</p>
     </div>
 
     <template v-else-if="idea">
       <div class="detail-toolbar">
-        <RouterLink :to="backTo" class="btn-secondary back-link">← 返回浏览</RouterLink>
+        <RouterLink :to="backTo">
+          <ElButton>← 返回浏览</ElButton>
+        </RouterLink>
         <div class="toolbar-actions">
           <template v-if="!editing">
-            <button type="button" class="btn-secondary" @click="startEdit">编辑</button>
-            <button
-              type="button"
-              class="btn-primary"
-              :disabled="exporting"
-              @click="handleExport"
-            >
-              <span v-if="exporting" class="spinner" />
+            <ElButton @click="startEdit">编辑</ElButton>
+            <ElButton type="primary" :loading="exporting" @click="handleExport">
               {{ exporting ? '导出中…' : '导出 Word' }}
-            </button>
+            </ElButton>
           </template>
           <template v-else>
-            <button type="button" class="btn-secondary" :disabled="saving" @click="cancelEdit">
-              取消
-            </button>
-            <button type="button" class="btn-primary" :disabled="saving" @click="handleSave">
-              <span v-if="saving" class="spinner" />
+            <ElButton :disabled="saving" @click="cancelEdit">取消</ElButton>
+            <ElButton type="primary" :loading="saving" @click="handleSave">
               {{ saving ? '保存中…' : '保存' }}
-            </button>
+            </ElButton>
           </template>
         </div>
       </div>
-
-      <Transition name="fade">
-        <p v-if="message" class="toast toast-success">{{ message }}</p>
-      </Transition>
-      <Transition name="fade">
-        <p v-if="actionError" class="toast toast-error">{{ actionError }}</p>
-      </Transition>
 
       <!-- 查看模式 -->
       <article v-if="!editing" class="card detail-card">
         <header class="detail-header">
           <h2>{{ idea.finalTitle }}</h2>
-          <CategoryBadge :code="idea.finalCategory" :label="categoryLabelText" />
+          <ElTag size="small" effect="light" :style="categoryTagStyle(idea.finalCategory)">
+            {{ categoryLabelText }}
+          </ElTag>
         </header>
 
         <div class="detail-meta">
@@ -63,7 +50,9 @@
         <section v-if="idea.finalTags?.length" class="detail-section">
           <h3>标签</h3>
           <div class="tags">
-            <span v-for="tag in idea.finalTags" :key="tag" class="tag">{{ tag }}</span>
+            <ElTag v-for="tag in idea.finalTags" :key="tag" size="small" type="info">
+              {{ tag }}
+            </ElTag>
           </div>
         </section>
 
@@ -72,10 +61,11 @@
           <RichTextContent :content="displayContent" />
         </section>
 
-        <details class="detail-section original-block">
-          <summary>原始正文（只读）</summary>
-          <div class="original-content">{{ idea.originalContent }}</div>
-        </details>
+        <ElCollapse class="detail-section">
+          <ElCollapseItem title="原始正文（只读）" name="original">
+            <div class="original-content">{{ idea.originalContent }}</div>
+          </ElCollapseItem>
+        </ElCollapse>
       </article>
 
       <!-- 编辑模式 -->
@@ -93,109 +83,88 @@
           <div class="ai-panel-row">
             <div class="ai-panel-sources">
               <p class="ai-panel-label">整理来源</p>
-              <div class="choice-group">
-                <label
-                  class="choice-pill"
-                  :class="{ active: reprocessSource === 'original' }"
-                >
-                  <input v-model="reprocessSource" type="radio" value="original" />
-                  原始正文
-                </label>
-                <label
-                  class="choice-pill"
-                  :class="{ active: reprocessSource === 'current' }"
-                >
-                  <input v-model="reprocessSource" type="radio" value="current" />
-                  当前排版正文
-                </label>
-              </div>
+              <ElRadioGroup v-model="reprocessSource">
+                <ElRadio value="original">原始正文</ElRadio>
+                <ElRadio value="current">当前排版正文</ElRadio>
+              </ElRadioGroup>
             </div>
-            <button
-              type="button"
-              class="btn-secondary reprocess-btn"
-              :disabled="reprocessing || saving"
+            <ElButton
+              :loading="reprocessing"
+              :disabled="saving"
               @click="requestReprocess"
             >
-              <span v-if="reprocessing" class="spinner" />
               {{ reprocessing ? 'AI 整理中…' : '开始整理' }}
-            </button>
+            </ElButton>
           </div>
           <p v-if="reprocessing" class="ai-panel-stream-hint">内容正在实时生成，请稍候…</p>
         </div>
 
-        <label class="field">
-          <span class="field-label">最终标题</span>
-          <input v-model="editForm.title" type="text" :disabled="reprocessing" />
-        </label>
-
-        <label class="field">
-          <span class="field-label">最终摘要</span>
-          <textarea v-model="editForm.summary" rows="3" :disabled="reprocessing" />
-        </label>
-
-        <label class="field">
-          <span class="field-label">标签</span>
-          <input v-model="editForm.tagsText" type="text" placeholder="标签1，标签2" :disabled="reprocessing" />
-          <span class="field-hint">多个标签用逗号分隔</span>
-        </label>
-
-        <label class="field">
-          <span class="field-label">类别</span>
-          <select v-model="editForm.category" :disabled="reprocessing">
-            <option v-for="item in enabledCategories" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </option>
-          </select>
-        </label>
-
-        <label class="field field-rich">
-          <span class="field-label">排版正文</span>
-          <div v-if="reprocessStreaming" class="stream-preview">
-            <RichTextContent :content="reprocessStreamContent || '…'" />
-            <span class="stream-cursor" aria-hidden="true" />
-          </div>
-          <RichTextEditor v-else v-model="editForm.content" min-height="360px" />
-          <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
-        </label>
+        <ElForm label-position="top" class="edit-form">
+          <ElFormItem label="最终标题" required>
+            <ElInput v-model="editForm.title" :disabled="reprocessing" />
+          </ElFormItem>
+          <ElFormItem label="最终摘要">
+            <ElInput v-model="editForm.summary" type="textarea" :rows="3" :disabled="reprocessing" />
+          </ElFormItem>
+          <ElFormItem label="标签">
+            <ElSelect
+              v-model="editFormTags"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="输入后回车添加标签"
+              :disabled="reprocessing"
+              style="width: 100%"
+            />
+          </ElFormItem>
+          <ElFormItem label="类别" required>
+            <ElSelect v-model="editForm.category" :disabled="reprocessing" style="width: 100%">
+              <ElOption
+                v-for="item in enabledCategories"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="排版正文">
+            <div v-if="reprocessStreaming" class="stream-preview">
+              <RichTextContent :content="reprocessStreamContent || '…'" />
+              <span class="stream-cursor" aria-hidden="true" />
+            </div>
+            <RichTextEditor v-else v-model="editForm.content" min-height="360px" />
+          </ElFormItem>
+        </ElForm>
       </article>
     </template>
 
-    <div v-else-if="error" class="empty-state">
-      <div class="empty-icon">!</div>
-      <p class="empty-title">{{ error }}</p>
-      <RouterLink :to="backTo" class="btn-secondary">返回浏览</RouterLink>
-    </div>
-
-    <ConfirmModal
-      :open="reprocessConfirmOpen"
-      title="AI 重新整理"
-      icon="ai"
-      variant="primary"
-      confirm-label="开始整理"
-      loading-label="AI 整理中…"
-      :loading="reprocessing"
-      hint="整理完成后请核对内容，确认无误后再保存。"
-      @cancel="cancelReprocess"
-      @confirm="handleReprocess"
-    >
-      <template #message>
-        重新整理将覆盖当前编辑区中的标题、摘要、标签、类别与排版正文，是否继续？
-      </template>
-    </ConfirmModal>
+    <ElEmpty v-else-if="error" :description="error">
+      <RouterLink :to="backTo">
+        <ElButton>返回浏览</ElButton>
+      </RouterLink>
+    </ElEmpty>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { getIdeaById, exportIdeaDocx, updateIdea, processIdeaStream, applyProcessResult } from '@/api/idea'
 import { storeToRefs } from 'pinia'
+import {
+  getIdeaById,
+  exportIdeaDocx,
+  updateIdea,
+  processIdeaStream,
+  applyProcessResult,
+} from '@/api/idea'
 import { useCategoryStore } from '@/stores/category'
-import CategoryBadge from '@/components/CategoryBadge.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
-import ConfirmModal from '@/components/ConfirmModal.vue'
 import { isEmptyHtml, toEditorHtml, htmlToPlainText } from '@/utils/contentHtml'
+import { categoryTagStyle } from '@/utils/categoryColor'
+import { confirmAction, showError, showSuccess } from '@/utils/message'
+import type { IdeaProcessRequest, IdeaResponse } from '@/types'
 
 const route = useRoute()
 const categoryStore = useCategoryStore()
@@ -208,12 +177,9 @@ const reprocessing = ref(false)
 const reprocessStreaming = ref(false)
 const reprocessStreamContent = ref('')
 const exporting = ref(false)
-const reprocessSource = ref('original')
-const reprocessConfirmOpen = ref(false)
-const error = ref(null)
-const message = ref(null)
-const actionError = ref(null)
-const idea = ref(null)
+const reprocessSource = ref<'original' | 'current'>('original')
+const error = ref<string | null>(null)
+const idea = ref<IdeaResponse | null>(null)
 const hasSuggestion = ref(false)
 
 const editForm = reactive({
@@ -224,37 +190,54 @@ const editForm = reactive({
   content: '',
 })
 
+const editFormTags = computed({
+  get: () =>
+    editForm.tagsText
+      ? editForm.tagsText.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
+      : [],
+  set: (tags: string[]) => {
+    editForm.tagsText = tags.join('，')
+  },
+})
+
 const suggestion = reactive({
   suggestedTitle: '',
   suggestedSummary: '',
-  suggestedTags: [],
+  suggestedTags: [] as string[],
   suggestedCategory: '',
   suggestedContent: '',
 })
 
-let reprocessAbortController = null
+let reprocessAbortController: AbortController | null = null
 
 onBeforeUnmount(() => {
   reprocessAbortController?.abort()
 })
 
-function applyReprocessPartial(partial) {
+function applyReprocessPartial(partial: Parameters<typeof applyProcessResult>[2]) {
   applyProcessResult(editForm, suggestion, partial, enabledCategories.value)
   if (partial.suggestedContent != null) {
     reprocessStreamContent.value = partial.suggestedContent
   }
 }
 
-function finalizeReprocessResult(result, fallbackContent) {
+function finalizeReprocessResult(
+  result: Parameters<typeof applyProcessResult>[2],
+  fallbackContent: string,
+) {
   applyReprocessPartial(result)
   editForm.content = toEditorHtml(result.suggestedContent ?? fallbackContent)
   hasSuggestion.value = true
 }
 
 const backTo = computed(() => {
-  const query = {}
-  if (route.query.category) query.category = route.query.category
-  if (route.query.q) query.q = route.query.q
+  const query: Record<string, string> = {}
+  if (route.query.category && typeof route.query.category === 'string') {
+    query.category = route.query.category
+  }
+  if (route.query.q && typeof route.query.q === 'string') {
+    query.q = route.query.q
+  }
   return { path: '/browse', query }
 })
 
@@ -266,12 +249,7 @@ const displayContent = computed(() =>
   idea.value?.finalContent || idea.value?.originalContent || '',
 )
 
-function parseTags(text) {
-  if (!text?.trim()) return []
-  return text.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean)
-}
-
-function fillEditForm(data) {
+function fillEditForm(data: IdeaResponse) {
   editForm.title = data.finalTitle ?? ''
   editForm.summary = data.finalSummary ?? ''
   editForm.tagsText = (data.finalTags ?? []).join('，')
@@ -285,15 +263,17 @@ async function loadDetail() {
   idea.value = null
   editing.value = false
 
+  const id = String(route.params.id)
+
   try {
     const [data] = await Promise.all([
-      getIdeaById(route.params.id),
+      getIdeaById(id),
       categoryStore.ensureLoaded(),
     ])
     idea.value = data
     fillEditForm(data)
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
     loading.value = false
   }
@@ -312,28 +292,26 @@ function resetSuggestion() {
 }
 
 function startEdit() {
+  if (!idea.value) return
   fillEditForm(idea.value)
   reprocessSource.value = 'original'
   resetSuggestion()
   editing.value = true
-  message.value = null
-  actionError.value = null
 }
 
 function cancelEdit() {
   editing.value = false
   resetSuggestion()
-  actionError.value = null
 }
 
-function buildProcessPayload() {
+function buildProcessPayload(): IdeaProcessRequest {
   if (reprocessSource.value === 'original') {
     const content = idea.value?.originalContent?.trim()
     if (!content) {
       throw new Error('原始正文为空，无法整理')
     }
     return {
-      originalTitle: idea.value?.originalTitle?.trim() || null,
+      originalTitle: idea.value?.originalTitle?.trim() || undefined,
       originalContent: content,
     }
   }
@@ -343,36 +321,36 @@ function buildProcessPayload() {
     throw new Error('当前排版正文为空，无法整理')
   }
   return {
-    originalTitle: editForm.title.trim() || null,
+    originalTitle: editForm.title.trim() || undefined,
     originalContent: content,
   }
 }
 
-function requestReprocess() {
-  actionError.value = null
+async function requestReprocess() {
   try {
     buildProcessPayload()
-    reprocessConfirmOpen.value = true
   } catch (e) {
-    actionError.value = e.message
-  }
-}
-
-function cancelReprocess() {
-  if (reprocessing.value) {
-    reprocessAbortController?.abort()
+    showError(e instanceof Error ? e.message : '无法整理')
     return
   }
-  reprocessConfirmOpen.value = false
+
+  const confirmed = await confirmAction({
+    title: 'AI 重新整理',
+    message: '重新整理将覆盖当前编辑区中的标题、摘要、标签、类别与排版正文，是否继续？',
+    confirmLabel: '开始整理',
+    type: 'info',
+  })
+  if (!confirmed) return
+
+  await handleReprocess()
 }
 
 async function handleReprocess() {
-  let payload
+  let payload: IdeaProcessRequest
   try {
     payload = buildProcessPayload()
   } catch (e) {
-    actionError.value = e.message
-    reprocessConfirmOpen.value = false
+    showError(e instanceof Error ? e.message : '无法整理')
     return
   }
 
@@ -382,9 +360,6 @@ async function handleReprocess() {
   reprocessing.value = true
   reprocessStreaming.value = true
   reprocessStreamContent.value = ''
-  actionError.value = null
-  message.value = null
-  reprocessConfirmOpen.value = false
 
   try {
     await processIdeaStream(
@@ -393,14 +368,14 @@ async function handleReprocess() {
         onPartial: applyReprocessPartial,
         onComplete: (result) => {
           finalizeReprocessResult(result, payload.originalContent)
-          message.value = 'AI 重新整理完成，请核对后保存'
+          showSuccess('AI 重新整理完成，请核对后保存')
         },
       },
       { signal: reprocessAbortController.signal },
     )
   } catch (e) {
-    if (e.name !== 'AbortError') {
-      actionError.value = e.message
+    if (!(e instanceof DOMException && e.name === 'AbortError')) {
+      showError(e instanceof Error ? e.message : 'AI 整理失败')
     }
   } finally {
     reprocessing.value = false
@@ -411,23 +386,21 @@ async function handleReprocess() {
 
 async function handleSave() {
   if (!editForm.title.trim()) {
-    actionError.value = '请填写最终标题'
+    showError('请填写最终标题')
     return
   }
 
   saving.value = true
-  actionError.value = null
-  message.value = null
+
+  const id = String(route.params.id)
 
   try {
-    const payload = {
+    const payload: Parameters<typeof updateIdea>[1] = {
       finalTitle: editForm.title.trim(),
       finalSummary: editForm.summary.trim() || null,
-      finalTags: parseTags(editForm.tagsText),
+      finalTags: editFormTags.value,
       finalCategory: editForm.category,
-      finalContent: isEmptyHtml(editForm.content)
-        ? null
-        : editForm.content.trim(),
+      finalContent: isEmptyHtml(editForm.content) ? null : editForm.content.trim(),
     }
 
     if (hasSuggestion.value) {
@@ -438,18 +411,18 @@ async function handleSave() {
       payload.suggestedContent = suggestion.suggestedContent
     }
 
-    idea.value = await updateIdea(route.params.id, payload)
+    idea.value = await updateIdea(id, payload)
     editing.value = false
     resetSuggestion()
-    message.value = '保存成功'
+    showSuccess('保存成功')
   } catch (e) {
-    actionError.value = e.message
+    showError(e instanceof Error ? e.message : '保存失败')
   } finally {
     saving.value = false
   }
 }
 
-function formatDate(value) {
+function formatDate(value: string | null | undefined) {
   if (!value) return ''
   return new Date(value).toLocaleString('zh-CN')
 }
@@ -457,13 +430,11 @@ function formatDate(value) {
 async function handleExport() {
   if (!idea.value?.id) return
   exporting.value = true
-  message.value = null
-  actionError.value = null
   try {
     const filename = await exportIdeaDocx(idea.value.id)
-    message.value = `已下载：${filename}`
+    showSuccess(`已下载：${filename}`)
   } catch (e) {
-    actionError.value = e.message
+    showError(e instanceof Error ? e.message : '导出失败')
   } finally {
     exporting.value = false
   }
@@ -473,6 +444,13 @@ async function handleExport() {
 <style scoped>
 .detail-page {
   gap: 1rem;
+}
+
+.loading-state {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail-toolbar {
@@ -489,34 +467,17 @@ async function handleExport() {
   flex-wrap: wrap;
 }
 
-.back-link {
-  text-decoration: none;
-}
-
 .detail-card {
   padding: 1.5rem;
 }
 
-.edit-card .card-header {
-  padding: 0 0 0.5rem;
-}
-
-.edit-card .field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin-top: 1.25rem;
-  font-size: 0.875rem;
+.edit-form {
+  margin-top: 1rem;
 }
 
 .ai-panel-sources {
   flex: 1;
   min-width: 0;
-}
-
-.reprocess-btn {
-  flex-shrink: 0;
-  align-self: flex-end;
 }
 
 .ai-panel-stream-hint {
@@ -528,6 +489,7 @@ async function handleExport() {
 .stream-preview {
   position: relative;
   min-height: 360px;
+  width: 100%;
 }
 
 .stream-cursor {
@@ -543,23 +505,6 @@ async function handleExport() {
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
-}
-
-.edit-card input,
-.edit-card textarea,
-.edit-card select {
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9375rem;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.edit-card textarea {
-  resize: vertical;
-  min-height: 120px;
-  line-height: 1.5;
 }
 
 .detail-header {
@@ -618,50 +563,20 @@ async function handleExport() {
   gap: 0.375rem;
 }
 
-.tag {
-  padding: 0.2rem 0.625rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
-.original-block summary {
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  margin-bottom: 0.5rem;
-}
-
 .original-content {
   white-space: pre-wrap;
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  margin-top: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--color-bg);
   border-radius: var(--radius-md);
   line-height: 1.6;
 }
 
-.detail-spinner {
-  width: 24px;
-  height: 24px;
-  border-width: 3px;
-  margin-bottom: 0.75rem;
-}
-
 @media (max-width: 640px) {
   .ai-panel-row {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .reprocess-btn {
-    align-self: stretch;
-    justify-content: center;
   }
 }
 </style>

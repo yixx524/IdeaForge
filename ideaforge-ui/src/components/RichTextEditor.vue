@@ -17,26 +17,37 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import '@wangeditor/editor/dist/css/style.css'
 
 import { onBeforeUnmount, shallowRef, watch } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
+import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import { toEditorHtml } from '@/utils/contentHtml'
 
-const props = defineProps({
-  modelValue: { type: String, default: '' },
-  placeholder: { type: String, default: '请输入正文…' },
-  disabled: { type: Boolean, default: false },
-  minHeight: { type: String, default: '280px' },
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    placeholder?: string
+    disabled?: boolean
+    minHeight?: string
+  }>(),
+  {
+    modelValue: '',
+    placeholder: '请输入正文…',
+    disabled: false,
+    minHeight: '280px',
+  },
+)
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+}>()
 
-const editorRef = shallowRef()
+const editorRef = shallowRef<IDomEditor>()
 let applyingExternalValue = false
 
-const toolbarConfig = {
+const toolbarConfig: Partial<IToolbarConfig> = {
   toolbarKeys: [
     'headerSelect',
     '|',
@@ -53,12 +64,12 @@ const toolbarConfig = {
   ],
 }
 
-const editorConfig = {
+const editorConfig: Partial<IEditorConfig> = {
   placeholder: props.placeholder,
   readOnly: props.disabled,
 }
 
-function handleCreated(editor) {
+function handleCreated(editor: IDomEditor) {
   editorRef.value = editor
   const html = toEditorHtml(props.modelValue)
   if (html) {
@@ -68,7 +79,7 @@ function handleCreated(editor) {
   }
 }
 
-function handleChange(editor) {
+function handleChange(editor: IDomEditor) {
   if (applyingExternalValue) return
   emit('update:modelValue', editor.getHtml())
 }

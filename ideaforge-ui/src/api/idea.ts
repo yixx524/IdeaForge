@@ -1,10 +1,26 @@
 import http from '@/api/http'
+import type { CategoryOption } from '@/constants/categories'
+import type {
+  DocumentParseResponse,
+  IdeaProcessRequest,
+  IdeaProcessResponse,
+  IdeaResponse,
+  IdeaSaveRequest,
+  IdeaSearchPageResponse,
+  IdeaUpdateRequest,
+  ProcessStreamOptions,
+  SearchIdeasParams,
+  SseHandlers,
+} from '@/types'
 
 /**
  * 读取 fetch 返回的 SSE 流（POST 场景无法用 EventSource）。
  * 支持 event: partial | delta | complete | error
  */
-async function readSseStream(response, handlers = {}) {
+async function readSseStream(
+  response: Response,
+  handlers: SseHandlers = {},
+): Promise<void> {
   const reader = response.body?.getReader()
   if (!reader) {
     throw new Error('浏览器不支持流式响应')
@@ -14,9 +30,9 @@ async function readSseStream(response, handlers = {}) {
   let buffer = ''
   let completed = false
 
-  const dispatch = (eventName, dataText) => {
+  const dispatch = (eventName: string, dataText: string) => {
     if (!dataText) return
-    let parsed
+    let parsed: unknown
     try {
       parsed = JSON.parse(dataText)
     } catch {
@@ -24,27 +40,33 @@ async function readSseStream(response, handlers = {}) {
     }
 
     if (eventName === 'delta' && handlers.onDelta) {
-      handlers.onDelta(parsed)
+      handlers.onDelta(parsed as Parameters<NonNullable<SseHandlers['onDelta']>>[0])
       return
     }
     if (eventName === 'partial' && handlers.onPartial) {
-      handlers.onPartial(parsed)
+      handlers.onPartial(parsed as IdeaProcessResponse)
       return
     }
     if (eventName === 'complete') {
       completed = true
-      if (handlers.onComplete) handlers.onComplete(parsed)
+      if (handlers.onComplete) handlers.onComplete(parsed as IdeaProcessResponse)
       return
     }
     if (eventName === 'error') {
-      const message = typeof parsed === 'object' && parsed?.message ? parsed.message : String(parsed)
+      const message =
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'message' in parsed &&
+        typeof (parsed as { message: unknown }).message === 'string'
+          ? (parsed as { message: string }).message
+          : String(parsed)
       throw new Error(message)
     }
   }
 
-  const parseBlock = (block) => {
+  const parseBlock = (block: string) => {
     let eventName = 'message'
-    const dataLines = []
+    const dataLines: string[] = []
 
     for (const line of block.split('\n')) {
       if (line.startsWith('event:')) {
@@ -82,7 +104,11 @@ async function readSseStream(response, handlers = {}) {
 }
 
 /** 阶段一：SSE 流式 AI 整理，不落库 */
-export async function processIdeaStream(payload, handlers = {}, options = {}) {
+export async function processIdeaStream(
+  payload: IdeaProcessRequest,
+  handlers: SseHandlers = {},
+  options: ProcessStreamOptions = {},
+): Promise<void> {
   const response = await fetch('/api/ideas/process/stream', {
     method: 'POST',
     headers: {
@@ -96,7 +122,7 @@ export async function processIdeaStream(payload, handlers = {}, options = {}) {
   if (!response.ok) {
     let message = 'AI 整理失败'
     try {
-      const body = await response.json()
+      const body = (await response.json()) as { message?: string }
       message = body.message ?? message
     } catch {
       // ignore non-json error body
@@ -108,61 +134,76 @@ export async function processIdeaStream(payload, handlers = {}, options = {}) {
 }
 
 /** 阶段一：同步 AI 整理（保留兼容） */
-export async function processIdea(payload) {
-  const { data } = await http.post('/ideas/process', payload)
+export async function processIdea(
+  payload: IdeaProcessRequest,
+): Promise<IdeaProcessResponse> {
+  const { data } = await http.post<IdeaProcessResponse>('/ideas/process', payload)
   return data
 }
 
 /** 阶段二：用户确认后保存至数据库 */
-export async function saveIdea(payload) {
-  const { data } = await http.post('/ideas', payload)
+export async function saveIdea(payload: IdeaSaveRequest): Promise<IdeaResponse> {
+  const { data } = await http.post<IdeaResponse>('/ideas', payload)
   return data
 }
 
 /**
  * 搜索已确认的知识条目（分页）；无 q/category 时返回最近条目列表
- * @param {{ q?: string, category?: string, page?: number, size?: number }} params
  */
-export async function searchIdeas({ q, category, page = 0, size = 20 } = {}) {
-  const params = { page, size }
+export async function searchIdeas({
+  q,
+  category,
+  page = 0,
+  size = 20,
+}: SearchIdeasParams = {}): Promise<IdeaSearchPageResponse> {
+  const params: Record<string, string | number> = { page, size }
   if (q?.trim()) params.q = q.trim()
   if (category) params.category = category
-  const { data } = await http.get('/ideas/search', { params })
+  const { data } = await http.get<IdeaSearchPageResponse>('/ideas/search', { params })
   return data
 }
 
 /** 获取单条知识条目详情 */
-export async function getIdeaById(id) {
-  const { data } = await http.get(`/ideas/${id}`)
+export async function getIdeaById(id: string): Promise<IdeaResponse> {
+  const { data } = await http.get<IdeaResponse>(`/ideas/${id}`)
   return data
 }
 
 /** 更新已确认的知识条目 */
-export async function updateIdea(id, payload) {
-  const { data } = await http.put(`/ideas/${id}`, payload)
+export async function updateIdea(
+  id: string,
+  payload: IdeaUpdateRequest,
+): Promise<IdeaResponse> {
+  const { data } = await http.put<IdeaResponse>(`/ideas/${id}`, payload)
   return data
 }
 
 /** 上传 Word/PDF，提取文本（不落库） */
-export async function parseDocument(file) {
+export async function parseDocument(file: File): Promise<DocumentParseResponse> {
   const formData = new FormData()
   formData.append('file', file)
-  const { data } = await http.post('/ideas/parse-document', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await http.post<DocumentParseResponse>(
+    '/ideas/parse-document',
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  )
   return data
 }
 
 /** 软删除知识条目（status=deleted，浏览不可见） */
-export async function deleteIdea(id) {
+export async function deleteIdea(id: string): Promise<void> {
   await http.delete(`/ideas/${id}`)
 }
 
 /** 导出单条知识条目为 Word 文档并触发浏览器下载 */
-export async function exportIdeaDocx(id) {
-  const response = await http.get(`/ideas/${id}/export/docx`, { responseType: 'blob' })
+export async function exportIdeaDocx(id: string): Promise<string> {
+  const response = await http.get<Blob>(`/ideas/${id}/export/docx`, {
+    responseType: 'blob',
+  })
   const blob = response.data
-  const disposition = response.headers['content-disposition'] ?? ''
+  const disposition = (response.headers['content-disposition'] as string | undefined) ?? ''
   let filename = '知识条目.docx'
   const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
   const plainMatch = disposition.match(/filename="([^"]+)"/i)
@@ -181,8 +222,28 @@ export async function exportIdeaDocx(id) {
   return filename
 }
 
+export interface ProcessFormState {
+  title: string
+  summary: string
+  tagsText: string
+  category: string
+}
+
+export interface ProcessSuggestionState {
+  suggestedTitle?: string
+  suggestedSummary?: string | null
+  suggestedTags?: string[]
+  suggestedCategory?: string
+  suggestedContent?: string | null
+}
+
 /** 将流式 partial / complete 结果应用到表单与 suggestion 缓存 */
-export function applyProcessResult(form, suggestion, result, categories = []) {
+export function applyProcessResult(
+  form: ProcessFormState,
+  suggestion: ProcessSuggestionState,
+  result: IdeaProcessResponse,
+  categories: CategoryOption[] = [],
+): string | null | undefined {
   if (result.suggestedTitle) {
     form.title = result.suggestedTitle
     suggestion.suggestedTitle = result.suggestedTitle

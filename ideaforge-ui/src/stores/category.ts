@@ -1,11 +1,20 @@
 import { defineStore } from 'pinia'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
+import type { CategoryResponse } from '@/types'
 
-let loadPromise = null
+let loadPromise: Promise<void> | null = null
+
+interface CategoryState {
+  enabled: CategoryResponse[]
+  all: CategoryResponse[]
+  loading: boolean
+  loaded: boolean
+  error: string | null
+}
 
 export const useCategoryStore = defineStore('category', {
-  state: () => ({
+  state: (): CategoryState => ({
     enabled: [],
     all: [],
     loading: false,
@@ -16,7 +25,8 @@ export const useCategoryStore = defineStore('category', {
   getters: {
     enabledOptions: (state) => toCategoryOptions(state.enabled),
     allOptions: (state) => toCategoryOptions(state.all),
-    labelOf: (state) => (code) => categoryLabel(code, state.all),
+    labelOf: (state) => (code: string | null | undefined) =>
+      categoryLabel(code, state.all),
   },
 
   actions: {
@@ -32,7 +42,8 @@ export const useCategoryStore = defineStore('category', {
         this.all = all
         this.loaded = true
       } catch (e) {
-        this.error = e.message
+        const message = e instanceof Error ? e.message : '加载类别失败'
+        this.error = message
         this.enabled = []
         this.all = []
         this.loaded = false

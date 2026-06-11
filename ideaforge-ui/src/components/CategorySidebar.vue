@@ -4,67 +4,53 @@
     <div class="sidebar-header">
       <h3>类别</h3>
     </div>
-    <nav class="category-nav">
-      <button
-        type="button"
-        class="category-item"
-        :class="{ active: !selectedCategory }"
-        @click="selectCategory('')"
-      >
+    <ElRadioGroup
+      :model-value="selectedCategory"
+      class="category-nav"
+      @change="selectCategory"
+    >
+      <ElRadioButton label="" class="category-radio">
         <span class="category-icon">▤</span>
         全部
-      </button>
-      <button
+      </ElRadioButton>
+      <ElRadioButton
         v-for="item in categories"
         :key="item.code"
-        type="button"
-        class="category-item"
-        :class="{ active: selectedCategory === item.code }"
-        @click="selectCategory(item.code)"
+        :label="item.code"
+        class="category-radio"
       >
-        <span class="category-dot" :style="dotStyle(item.code)" />
+        <span class="category-dot" :style="{ background: categoryDotColor(item.code) }" />
         {{ item.label }}
-      </button>
-    </nav>
+      </ElRadioButton>
+    </ElRadioGroup>
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategoryStore } from '@/stores/category'
+import { categoryDotColor } from '@/utils/categoryColor'
 
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const { enabled: categories } = storeToRefs(categoryStore)
 
-const selectedCategory = computed(() => route.query.category ?? '')
+const selectedCategory = computed(() =>
+  typeof route.query.category === 'string' ? route.query.category : '',
+)
 
-const PALETTE = ['#1d4ed8', '#15803d', '#a21caf', '#c2410c', '#0369a1', '#a16207']
-
-function dotStyle(code) {
-  let hash = 0
-  for (let i = 0; i < code.length; i++) {
-    hash = code.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return { background: PALETTE[Math.abs(hash) % PALETTE.length] }
-}
-
-function selectCategory(code) {
-  const query = { ...route.query }
-  if (code) {
-    query.category = code
+function selectCategory(code: string | number | boolean | undefined) {
+  const categoryCode = String(code ?? '')
+  const query: Record<string, string> = { ...route.query } as Record<string, string>
+  if (categoryCode) {
+    query.category = categoryCode
   } else {
     delete query.category
   }
   delete query.page
-
-  if (route.name === 'idea-detail') {
-    router.push({ path: '/browse', query })
-    return
-  }
 
   router.push({ path: '/browse', query })
 }
@@ -101,38 +87,40 @@ function selectCategory(code) {
   display: flex;
   flex-direction: column;
   padding: 0.5rem;
-  gap: 0.125rem;
+  gap: 0.25rem;
+  width: 100%;
 }
 
-.category-item {
+.category-nav :deep(.el-radio-button) {
+  width: 100%;
+}
+
+.category-nav :deep(.el-radio-button__inner) {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: none;
-  border-radius: var(--radius-md);
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
   background: transparent;
   color: var(--color-text-muted);
   font-size: 0.875rem;
   font-weight: 500;
   text-align: left;
-  cursor: pointer;
-  transition:
-    background var(--transition),
-    color var(--transition);
+  padding: 0.625rem 0.75rem;
+  justify-content: flex-start;
 }
 
-.category-item:hover {
-  background: rgba(26, 74, 110, 0.05);
-  color: var(--color-primary);
-  transform: none;
-}
-
-.category-item.active {
+.category-nav :deep(.el-radio-button.is-active .el-radio-button__inner) {
   background: linear-gradient(135deg, rgba(26, 74, 110, 0.08), rgba(217, 160, 91, 0.1));
   color: var(--color-primary);
   font-weight: 600;
+}
+
+.category-nav :deep(.el-radio-button__inner:hover) {
+  background: rgba(26, 74, 110, 0.05);
+  color: var(--color-primary);
 }
 
 .category-icon {
@@ -160,13 +148,15 @@ function selectCategory(code) {
     flex-wrap: nowrap;
     overflow-x: auto;
     padding: 0.5rem 0.75rem 0.75rem;
-    gap: 0.375rem;
   }
 
-  .category-item {
+  .category-nav :deep(.el-radio-button) {
     width: auto;
-    white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  .category-nav :deep(.el-radio-button__inner) {
+    white-space: nowrap;
   }
 }
 </style>

@@ -4,11 +4,19 @@
     <RouterLink :to="detailTo" class="result-link">
       <header class="result-header">
         <h3>{{ item.finalTitle }}</h3>
-        <CategoryBadge :code="item.finalCategory" :label="categoryLabel" />
+        <ElTag
+          size="small"
+          effect="light"
+          :style="categoryTagStyle(item.finalCategory)"
+        >
+          {{ categoryLabel }}
+        </ElTag>
       </header>
       <p v-if="item.finalSummary" class="summary">{{ item.finalSummary }}</p>
       <div v-if="item.finalTags?.length" class="tags">
-        <span v-for="tag in item.finalTags" :key="tag" class="tag">{{ tag }}</span>
+        <ElTag v-for="tag in item.finalTags" :key="tag" size="small" type="info">
+          {{ tag }}
+        </ElTag>
       </div>
       <footer class="meta">
         <span class="meta-left">
@@ -19,36 +27,46 @@
       </footer>
     </RouterLink>
 
-    <button
-      type="button"
-      class="icon-btn-danger card-delete"
+    <ElButton
+      class="card-delete"
+      type="danger"
+      circle
+      plain
+      size="small"
       title="删除此条目"
       aria-label="删除此条目"
       @click.stop="emit('delete', item)"
     >
       ×
-    </button>
+    </ElButton>
   </article>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import CategoryBadge from '@/components/CategoryBadge.vue'
+import { categoryTagStyle } from '@/utils/categoryColor'
+import type { IdeaResponse } from '@/types'
 
-const props = defineProps({
-  item: { type: Object, required: true },
-  categoryLabel: { type: String, default: '' },
-})
+const props = defineProps<{
+  item: IdeaResponse
+  categoryLabel?: string
+}>()
 
-const emit = defineEmits(['delete'])
+const emit = defineEmits<{
+  delete: [item: IdeaResponse]
+}>()
 
 const route = useRoute()
 
 const detailTo = computed(() => {
-  const query = {}
-  if (route.query.category) query.category = route.query.category
-  if (route.query.q) query.q = route.query.q
+  const query: Record<string, string> = {}
+  if (route.query.category && typeof route.query.category === 'string') {
+    query.category = route.query.category
+  }
+  if (route.query.q && typeof route.query.q === 'string') {
+    query.q = route.query.q
+  }
   return { name: 'idea-detail', params: { id: props.item.id }, query }
 })
 
@@ -125,15 +143,6 @@ const formattedDate = computed(() => {
   flex-wrap: wrap;
   gap: 0.375rem;
   margin-bottom: 0.625rem;
-}
-
-.tag {
-  padding: 0.15rem 0.5rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
 }
 
 .meta {

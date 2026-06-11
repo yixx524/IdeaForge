@@ -1,57 +1,61 @@
 <!-- 录入想法页：两阶段流程 input（原始输入）→ review（编辑 AI 建议并保存） -->
 <template>
   <div class="page">
-    <!-- 步骤指示器 -->
-    <div class="steps">
-      <div class="step" :class="{ active: step === 'input', done: step === 'review' }">
-        <span class="step-num">1</span>
-        <span class="step-label">录入想法</span>
-      </div>
-      <div class="step-line" :class="{ done: step === 'review' }" />
-      <div class="step" :class="{ active: step === 'review' }">
-        <span class="step-num">2</span>
-        <span class="step-label">确认保存</span>
-      </div>
-    </div>
+    <ElSteps :active="stepIndex" finish-status="success" align-center class="steps">
+      <ElStep title="录入想法" />
+      <ElStep title="确认保存" />
+    </ElSteps>
 
     <!-- 阶段一：用户输入原始标题与正文 -->
     <section v-if="step === 'input'" class="card">
       <div class="card-header">
         <h2>录入想法</h2>
-        <p class="hint">输入原始标题与正文，或上传 Word / PDF 文档，由 AI 整理为结构化信息</p>
+        <p class="card-hint">输入原始标题与正文，或上传 Word / PDF 文档，由 AI 整理为结构化信息</p>
       </div>
 
-      <FileUploadZone
-        :loading="parsing"
-        :file-name="uploadedFileName"
-        :char-count="uploadedCharCount"
-        @select="handleFileUpload"
-        @clear="clearUpload"
-      />
+      <div class="upload-section">
+        <ElUpload
+          drag
+          :auto-upload="false"
+          :show-file-list="false"
+          accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          :disabled="parsing"
+          @change="onUploadChange"
+        >
+          <div class="upload-inner">
+            <p class="upload-title">拖拽文件到此处，或点击选择</p>
+            <p class="upload-hint">支持 .docx / .pdf，单文件最大 10MB</p>
+          </div>
+        </ElUpload>
+        <div v-if="uploadedFileName" class="upload-meta">
+          <span>已选：{{ uploadedFileName }}</span>
+          <span v-if="uploadedCharCount">（约 {{ uploadedCharCount }} 字）</span>
+          <ElButton link type="primary" @click="clearUpload">清除</ElButton>
+        </div>
+      </div>
 
       <div class="input-divider">
         <span>或手动输入</span>
       </div>
 
-      <label class="field">
-        <span class="label">标题 <em class="optional">可选</em></span>
-        <input v-model="original.title" type="text" placeholder="给想法起个简短标题…" />
-      </label>
-
-      <label class="field">
-        <span class="label">正文</span>
-        <textarea
-          v-model="original.content"
-          rows="8"
-          placeholder="写下你的想法、笔记或灵感…"
-        />
-      </label>
+      <ElForm label-position="top" class="form-body">
+        <ElFormItem label="标题（可选）">
+          <ElInput v-model="original.title" placeholder="给想法起个简短标题…" />
+        </ElFormItem>
+        <ElFormItem label="正文" required>
+          <ElInput
+            v-model="original.content"
+            type="textarea"
+            :rows="8"
+            placeholder="写下你的想法、笔记或灵感…"
+          />
+        </ElFormItem>
+      </ElForm>
 
       <div class="card-footer">
-        <button type="button" class="btn-primary" :disabled="loading" @click="handleProcess">
-          <span v-if="loading" class="spinner" />
+        <ElButton type="primary" :loading="loading" @click="handleProcess">
           {{ loading ? 'AI 整理中…' : '开始 AI 整理' }}
-        </button>
+        </ElButton>
       </div>
     </section>
 
@@ -59,7 +63,7 @@
     <section v-else class="card">
       <div class="card-header">
         <h2>确认并保存</h2>
-        <p class="hint">可编辑 AI 建议后确认入库</p>
+        <p class="card-hint">可编辑 AI 建议后确认入库</p>
       </div>
 
       <div class="ai-badge">
@@ -67,103 +71,97 @@
         {{ streaming ? 'AI 正在整理，内容实时生成中…' : 'AI 已整理完成，请核对以下内容' }}
       </div>
 
-      <label class="field">
-        <span class="label">最终标题</span>
-        <input v-model="finalForm.title" type="text" :disabled="streaming" />
-      </label>
-
-      <label class="field">
-        <span class="label">最终摘要</span>
-        <textarea v-model="finalForm.summary" rows="3" placeholder="一句话概括…" :disabled="streaming" />
-      </label>
-
-      <label class="field">
-        <span class="label">标签</span>
-        <input v-model="finalForm.tagsText" type="text" placeholder="标签1，标签2，标签3" :disabled="streaming" />
-        <span class="field-hint">多个标签用逗号分隔</span>
-      </label>
-
-      <label class="field">
-        <span class="label">类别</span>
-        <select v-model="finalForm.category" :disabled="streaming">
-          <option v-for="item in categories" :key="item.value" :value="item.value">
-            {{ item.label }}
-          </option>
-        </select>
-      </label>
-
-      <label class="field field-rich">
-        <span class="label">排版正文</span>
-        <div v-if="streaming" class="stream-preview">
-          <RichTextContent :content="streamContent || '…'" />
-          <span class="stream-cursor" aria-hidden="true" />
-        </div>
-        <RichTextEditor v-else v-model="finalForm.content" min-height="320px" />
-        <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
-      </label>
+      <ElForm label-position="top" class="form-body">
+        <ElFormItem label="最终标题" required>
+          <ElInput v-model="finalForm.title" :disabled="streaming" />
+        </ElFormItem>
+        <ElFormItem label="最终摘要">
+          <ElInput v-model="finalForm.summary" type="textarea" :rows="3" placeholder="一句话概括…" :disabled="streaming" />
+        </ElFormItem>
+        <ElFormItem label="标签">
+          <ElSelect
+            v-model="finalFormTags"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            placeholder="输入后回车添加标签"
+            :disabled="streaming"
+            style="width: 100%"
+          />
+          <p class="field-hint">可输入多个标签，回车确认</p>
+        </ElFormItem>
+        <ElFormItem label="类别" required>
+          <ElSelect v-model="finalForm.category" :disabled="streaming" style="width: 100%">
+            <ElOption
+              v-for="item in categories"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="排版正文">
+          <div v-if="streaming" class="stream-preview">
+            <RichTextContent :content="streamContent || '…'" />
+            <span class="stream-cursor" aria-hidden="true" />
+          </div>
+          <RichTextEditor v-else v-model="finalForm.content" min-height="320px" />
+          <p class="field-hint">支持标题、加粗、列表等富文本格式</p>
+        </ElFormItem>
+      </ElForm>
 
       <div class="card-footer actions">
-        <button type="button" class="btn-secondary" :disabled="loading" @click="handleBack">
+        <ElButton :disabled="loading && !streaming" @click="handleBack">
           {{ streaming ? '取消整理' : '返回修改' }}
-        </button>
-        <button type="button" class="btn-primary" :disabled="loading || streaming" @click="handleSave">
-          <span v-if="loading" class="spinner" />
-          {{ loading ? '保存中…' : '确认保存' }}
-        </button>
+        </ElButton>
+        <ElButton type="primary" :loading="loading && !streaming" :disabled="streaming" @click="handleSave">
+          {{ loading && !streaming ? '保存中…' : '确认保存' }}
+        </ElButton>
       </div>
     </section>
-
-    <Transition name="fade">
-      <p v-if="error" class="toast toast-error">{{ error }}</p>
-    </Transition>
-    <Transition name="fade">
-      <p v-if="success" class="toast toast-success">{{ success }}</p>
-    </Transition>
   </div>
 </template>
 
-<script setup>
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import type { UploadFile } from 'element-plus'
 import { parseDocument, processIdeaStream, saveIdea, applyProcessResult } from '@/api/idea'
 import { useCategoryStore } from '@/stores/category'
-import { storeToRefs } from 'pinia'
-import FileUploadZone from '@/components/FileUploadZone.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
 import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
+import { showError, showSuccess } from '@/utils/message'
+
+type Step = 'input' | 'review'
 
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const { enabledOptions: categories } = storeToRefs(categoryStore)
 
-/** 当前步骤：input 录入 | review 确认 */
-const step = ref('input')
+const step = ref<Step>('input')
+const stepIndex = computed(() => (step.value === 'input' ? 0 : 1))
 const loading = ref(false)
 const streaming = ref(false)
 const streamContent = ref('')
 const parsing = ref(false)
-const error = ref(null)
-const success = ref(null)
 const uploadedFileName = ref('')
 const uploadedCharCount = ref(0)
-
-/** 用户原始输入 */
 const original = reactive({
   title: '',
   content: '',
 })
 
-/** AI 返回的建议字段（保存时一并提交，便于追溯） */
 const suggestion = reactive({
   suggestedTitle: '',
   suggestedSummary: '',
-  suggestedTags: [],
+  suggestedTags: [] as string[],
   suggestedCategory: '',
   suggestedContent: '',
 })
 
-/** 用户编辑后的最终字段（tagsText 为逗号分隔字符串，提交前转为数组） */
 const finalForm = reactive({
   title: '',
   summary: '',
@@ -172,7 +170,17 @@ const finalForm = reactive({
   content: '',
 })
 
-let processAbortController = null
+const finalFormTags = computed({
+  get: () =>
+    finalForm.tagsText
+      ? finalForm.tagsText.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
+      : [],
+  set: (tags: string[]) => {
+    finalForm.tagsText = tags.join('，')
+  },
+})
+
+let processAbortController: AbortController | null = null
 
 onBeforeUnmount(() => {
   processAbortController?.abort()
@@ -193,14 +201,14 @@ function resetReviewForm() {
   })
 }
 
-function applyStreamPartial(partial) {
+function applyStreamPartial(partial: Parameters<typeof applyProcessResult>[2]) {
   applyProcessResult(finalForm, suggestion, partial, categories.value)
   if (partial.suggestedContent != null) {
     streamContent.value = partial.suggestedContent
   }
 }
 
-function finalizeStreamResult(result) {
+function finalizeStreamResult(result: Parameters<typeof applyProcessResult>[2]) {
   applyStreamPartial(result)
   finalForm.content = toEditorHtml(result.suggestedContent ?? original.content.trim())
 }
@@ -209,30 +217,25 @@ onMounted(async () => {
   try {
     await categoryStore.ensureLoaded()
     if (categories.value.length && !finalForm.category) {
-      const defaultCat = categories.value.find((c) => c.value === 'INSPIRATION') ?? categories.value[0]
+      const defaultCat =
+        categories.value.find((c) => c.value === 'INSPIRATION') ?? categories.value[0]
       finalForm.category = defaultCat.value
     }
   } catch (e) {
-    error.value = e.message
+    showError(e instanceof Error ? e.message : '加载类别失败')
   }
 })
 
-/** 将逗号分隔的标签文本转为数组 */
-function parseTags(text) {
-  if (!text?.trim()) return []
-  return text.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean)
-}
-
-async function handleFileUpload({ file, error: uploadError }) {
-  if (uploadError) {
-    error.value = uploadError
-    return
-  }
+async function onUploadChange(uploadFile: UploadFile) {
+  const file = uploadFile.raw
   if (!file) return
 
+  if (file.size > 10 * 1024 * 1024) {
+    showError('文件大小不能超过 10MB')
+    return
+  }
+
   parsing.value = true
-  error.value = null
-  success.value = null
 
   try {
     const result = await parseDocument(file)
@@ -242,9 +245,9 @@ async function handleFileUpload({ file, error: uploadError }) {
     if (result.extractedTitle && !original.title.trim()) {
       original.title = result.extractedTitle
     }
-    success.value = `已从「${uploadedFileName.value}」提取文本，请核对后点击 AI 整理`
+    showSuccess(`已从「${uploadedFileName.value}」提取文本，请核对后点击 AI 整理`)
   } catch (e) {
-    error.value = e.message
+    showError(e instanceof Error ? e.message : '解析失败')
     clearUpload()
   } finally {
     parsing.value = false
@@ -256,10 +259,9 @@ function clearUpload() {
   uploadedCharCount.value = 0
 }
 
-/** 调用 POST /api/ideas/process/stream，流式展示后切换到 review */
 async function handleProcess() {
   if (!original.content.trim()) {
-    error.value = '请输入想法正文'
+    showError('请输入想法正文')
     return
   }
 
@@ -268,13 +270,11 @@ async function handleProcess() {
 
   loading.value = true
   streaming.value = true
-  error.value = null
-  success.value = null
   resetReviewForm()
   step.value = 'review'
 
   const payload = {
-    originalTitle: original.title.trim() || null,
+    originalTitle: original.title.trim() || undefined,
     originalContent: original.content.trim(),
   }
 
@@ -288,11 +288,11 @@ async function handleProcess() {
       { signal: processAbortController.signal },
     )
   } catch (e) {
-    if (e.name === 'AbortError') {
+    if (e instanceof DOMException && e.name === 'AbortError') {
       step.value = 'input'
       return
     }
-    error.value = e.message
+    showError(e instanceof Error ? e.message : 'AI 整理失败')
     step.value = 'input'
   } finally {
     loading.value = false
@@ -301,29 +301,26 @@ async function handleProcess() {
   }
 }
 
-/** 调用 POST /api/ideas 持久化，成功后重置表单 */
 async function handleSave() {
   if (!finalForm.title.trim()) {
-    error.value = '请填写最终标题'
+    showError('请填写最终标题')
     return
   }
 
   loading.value = true
-  error.value = null
-  success.value = null
 
   try {
     const saved = await saveIdea({
-      originalTitle: original.title.trim() || null,
+      originalTitle: original.title.trim() || undefined,
       originalContent: original.content.trim(),
       suggestedTitle: suggestion.suggestedTitle,
-      suggestedSummary: suggestion.suggestedSummary,
+      suggestedSummary: suggestion.suggestedSummary || null,
       suggestedTags: suggestion.suggestedTags,
       suggestedCategory: suggestion.suggestedCategory,
       suggestedContent: suggestion.suggestedContent,
       finalTitle: finalForm.title.trim(),
       finalSummary: finalForm.summary.trim() || null,
-      finalTags: parseTags(finalForm.tagsText),
+      finalTags: finalFormTags.value,
       finalCategory: finalForm.category,
       finalContent: isEmptyHtml(finalForm.content)
         ? toEditorHtml(original.content.trim())
@@ -332,7 +329,7 @@ async function handleSave() {
 
     await router.push({ name: 'idea-detail', params: { id: saved.id } })
   } catch (e) {
-    error.value = e.message
+    showError(e instanceof Error ? e.message : '保存失败')
   } finally {
     loading.value = false
   }
@@ -344,7 +341,6 @@ function handleBack() {
     return
   }
   step.value = 'input'
-  error.value = null
 }
 </script>
 
@@ -355,90 +351,38 @@ function handleBack() {
   gap: 1.25rem;
 }
 
-/* 步骤指示器 */
 .steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
   padding: 0.5rem 0;
 }
 
-.step {
+.upload-section {
+  padding: 0 1.5rem;
+  margin-top: 1rem;
+}
+
+.upload-inner {
+  padding: 1rem;
+}
+
+.upload-title {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.upload-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.upload-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  color: var(--color-text-muted);
+  margin-top: 0.75rem;
   font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.step-num {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  background: var(--color-border);
   color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: all var(--transition);
-}
-
-.step.active .step-num {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(26, 74, 110, 0.3);
-}
-
-.step.done .step-num {
-  background: var(--color-accent);
-  color: #fff;
-}
-
-.step.active .step-label,
-.step.done .step-label {
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.step-line {
-  width: 3rem;
-  height: 2px;
-  background: var(--color-border);
-  margin: 0 0.75rem;
-  transition: background var(--transition);
-}
-
-.step-line.done {
-  background: linear-gradient(90deg, var(--color-accent), var(--color-primary-light));
-}
-
-/* 卡片 */
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 1.5rem 1.5rem 0;
-}
-
-.card-header h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin-bottom: 0.375rem;
-}
-
-.hint {
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
 }
 
 .input-divider {
@@ -456,6 +400,10 @@ function handleBack() {
   flex: 1;
   height: 1px;
   background: var(--color-border);
+}
+
+.form-body {
+  padding: 0 1.5rem;
 }
 
 .ai-badge {
@@ -484,30 +432,10 @@ function handleBack() {
   50% { opacity: 0.4; }
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  padding: 0 1.5rem;
-  margin-top: 1.25rem;
-  font-size: 0.875rem;
-}
-
-.label {
-  color: var(--color-text);
-  font-weight: 600;
-  font-size: 0.8125rem;
-}
-
-.optional {
-  font-style: normal;
-  font-weight: 400;
-  color: var(--color-text-muted);
-}
-
 .field-hint {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  margin-top: 0.25rem;
 }
 
 .stream-preview {
@@ -530,107 +458,9 @@ function handleBack() {
   50% { opacity: 0; }
 }
 
-input,
-textarea,
-select {
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9375rem;
-  background: var(--color-surface);
-  color: var(--color-text);
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-
-textarea {
-  resize: vertical;
-  min-height: 120px;
-  line-height: 1.5;
-}
-
-select {
-  cursor: pointer;
-}
-
-.card-footer {
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
-  background: rgba(240, 244, 248, 0.5);
-}
-
 .actions {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.5rem;
-  border: none;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: #fff;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(26, 74, 110, 0.25);
-}
-
-.btn-primary:not(:disabled):hover {
-  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
-  box-shadow: 0 4px 12px rgba(26, 74, 110, 0.35);
-}
-
-.btn-secondary {
-  padding: 0.625rem 1.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.btn-secondary:not(:disabled):hover {
-  background: var(--color-bg);
-  border-color: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 提示消息 — 样式见 main.css .toast-* */
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 </style>

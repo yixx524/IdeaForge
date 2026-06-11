@@ -60,6 +60,7 @@
 | 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
 | AI 流式整理 (SSE) | 已完成（`POST /api/ideas/process/stream`，前端打字机预览 suggestedContent） |
 | 类别字典缓存 | 已完成（后端 `CategoryService` Spring Cache + 前端 Pinia `categoryStore` 会话内共享） |
+| 前端 TypeScript + Element Plus | 已完成（类型定义、按需自动导入、表单/分页/消息组件） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -89,12 +90,10 @@ IdeaForge-v/
 | 构建 | Maven | wrapper（`mvnw`） |
 | AI 集成 | Spring AI + DeepSeek | 1.1.0 / `deepseek-v4-pro` |
 | 持久化 | Spring Data JPA + PostgreSQL | VM `192.168.226.131:5432/knowledge_db` |
-| 前端 | Vue 3 + Vite | ^3.5 / ^8.0（JavaScript） |
+| 前端 | Vue 3 + Vite + TypeScript | ^3.5 / ^8.0 |
 | 向量检索（V2） | pgvector | V1 暂不启用，使用关键词搜索 |
 
-**前端已安装依赖：** vue-router、axios、pinia、@wangeditor/editor、marked、dompurify
-
-**前端规划依赖（待安装，新增须评审）：** Element Plus
+**前端已安装依赖：** vue-router、axios、pinia、element-plus、@wangeditor/editor、marked、dompurify
 
 ## 系统架构（V1）
 
@@ -152,7 +151,8 @@ flowchart TB
 | `stores/` | 全局状态（Pinia） | 低频字典数据缓存、跨页面共享 | 页面 UI、直接 DOM |
 | `assets/` | 静态资源 | css、图片、字体 | JS 逻辑 |
 | `App.vue` | 根布局壳 | 导航栏、`<router-view>` | 具体页面业务 |
-| `main.js` | 应用入口 | createApp、插件注册 | 业务代码 |
+| `main.ts` | 应用入口 | createApp、插件注册 | 业务代码 |
+| `types/` | API 类型定义 | interface、与后端 DTO 对齐 | 业务逻辑、HTTP 调用 |
 
 **依赖方向（单向）：** `views → components + api`；`api` 不依赖 `views` / `components`。
 
