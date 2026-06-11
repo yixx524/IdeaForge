@@ -1,274 +1,322 @@
 # IdeaForge
 
-个人知识 / 想法整理工具。上传原始想法文本，由 DeepSeek 大模型智能整理为结构化信息，经用户确认后存入 PostgreSQL，并支持关键词检索。
+[![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.3-brightgreen)](https://spring.io/projects/spring-boot)
+[![Vue](https://img.shields.io/badge/Vue-3.5-42b883)](https://vuejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-8-646cff)](https://vitejs.dev/)
 
-## 开发前必读（本文件）
+**IdeaForge** 是一款开源的个人知识整理工具。将零散的想法、笔记与文档交给 AI 结构化处理，经人工确认后安全存入数据库，并支持检索、编辑与导出。
 
-**每次开发前**，必须先完整阅读本 README.md（仅本文件，子模块 README 自行安排）。阅读完毕后，在对话或工作记录中输出：
+> **V1 已正式发布。** 本版本提供完整的录入、AI 整理、浏览检索、详情管理与类别字典能力。语义向量搜索等功能规划于 V2。
 
-```
-易----大开工！
-```
+---
 
-**每次开发完成后**，必须更新本 README.md 中的进度、已知问题等与本次改动相关的内容（子模块 README 自行维护）。更新完毕后，输出：
+## 功能特性
 
-```
-易----屎山完成！
-```
-
-## 项目简介
-
-**V1.5 新增能力：**
-
-1. **首页**（`/`）— 快速录入 / 浏览入口，展示最近知识
-2. **浏览**（`/browse`）— 左侧类别导航 + 关键词搜索 + 可点击结果列表
-3. **详情**（`/ideas/:id`）— 查看完整条目，支持导出 Word
-4. **文档上传** — 录入页支持 `.docx` / `.pdf`，解析后填入表单再走 AI 整理
-5. **Word 导出** — 详情页一键下载结构化 `.docx`
-6. **详情编辑** — 详情页可编辑标题、摘要、标签、类别、排版正文
-7. **富文本正文** — AI 整理输出 Markdown，前端 WangEditor 转 HTML 存储；详情页富文本查看与编辑
-
-**V1 核心流程：**
-
-1. 用户上传原始想法（标题 + 正文）
-2. 系统调用 DeepSeek（`deepseek-v4-pro`）生成建议标题、一句话摘要、标签、类别
-3. 前端展示结果，用户可编辑后确认
-4. 确认后持久化至 PostgreSQL
-5. 通过关键词搜索已有知识条目
-
-**当前进度：**
-
-| 模块 | 状态 |
+| 能力 | 说明 |
 |------|------|
-| 后端脚手架 | 已完成（`pom.xml`、`application.yml`、启动类） |
-| 后端连通 | 已完成（`/api/health`、`WebConfig` CORS、环境变量配置） |
-| 前端脚手架 | 已完成（`ideaforge-ui`，Vue 3 + Vite 8） |
-| 前后端联调 | 已完成（Vite proxy、全链路 API 测试通过） |
-| 后端业务 | 已完成（Entity / Repository / DTO / Service / Controller / 异常处理） |
-| 前端业务 | 已完成（vue-router、axios、各 View + components） |
-| 前端 UI | 已完成（首页、侧栏类别导航、共享设计系统） |
-| V1 核心流程 | 已完成（AI 整理 → 确认保存 → 关键词搜索） |
-| V1.5 浏览与详情 | 已完成（首页、BrowseView、IdeaDetailView、左侧类别导航） |
-| V1.5 文档上传 | 已完成（`.docx` / `.pdf` 解析 → 录入页填充 → AI 整理） |
-| V1.5 Word 导出 | 已完成（详情页导出 `.docx`，排版分段） |
-| V1.6 详情编辑 | 已完成（PUT 更新最终字段） |
-| V1.6 AI 正文排版 | 已完成（`final_content` 富文本 HTML，WangEditor） |
-| 标签/类别搜索 | 已修复（关键词与类别分离；类别用侧栏筛选） |
-| 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
-| 浏览软删除 | 已完成（`DELETE /api/ideas/{id}`，status=deleted，浏览不可见） |
-| 搜索分页 | 已完成（`GET /api/ideas/search?page=&size=`，BrowseView 分页器） |
-| 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
-| AI 流式整理 (SSE) | 已完成（`POST /api/ideas/process/stream`，前端打字机预览 suggestedContent） |
-| 类别字典缓存 | 已完成（后端 `CategoryService` Spring Cache + 前端 Pinia `categoryStore` 会话内共享） |
-| 前端 TypeScript + Element Plus | 已完成（类型定义、按需自动导入、表单/分页/消息组件） |
-| 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
+| **AI 智能整理** | 基于 DeepSeek 大模型，自动生成标题、摘要、标签、类别与排版正文；支持 SSE 流式输出 |
+| **两阶段确认流程** | AI 建议不落库，用户审阅编辑后再持久化，确保数据质量 |
+| **文档导入** | 支持 `.docx` / `.pdf` 文本提取，解析后进入 AI 整理流程 |
+| **关键词检索** | 按标题、摘要、正文、标签搜索，配合类别侧栏筛选与分页 |
+| **富文本正文** | AI 输出 Markdown，前端转换为 HTML 存储；支持 WangEditor 查看与编辑 |
+| **详情管理** | 查看、编辑、软删除已确认条目；支持基于原始或当前正文重新 AI 整理 |
+| **Word 导出** | 单条知识条目一键导出为结构化 `.docx` 文档 |
+| **类别字典** | 数据库维护类别，前端提供增删改管理，支持软删除与缓存 |
 
-## 项目结构
-
-```
-IdeaForge-v/
-├── README.md                 # 本文件（项目总览 + 全局规范）
-├── db/
-│   ├── public.sql            # VM 数据库参考脚本
-│   ├── migrate_idea_categories.sql  # 类别字典表迁移脚本
-│   ├── migrate_final_content.sql    # 排版正文字段迁移
-│   └── migrate_soft_delete.sql      # 知识条目软删除 status 扩展
-├── IdeaForge/                # 后端（Spring Boot）
-│   ├── README.md             # 后端专项说明
-│   └── src/main/java/com/exam/ideaforge/
-└── ideaforge-ui/             # 前端（Vue 3 + Vite）
-    ├── README.md             # 前端专项说明
-    └── src/
-```
+---
 
 ## 技术栈
 
-| 层级 | 技术 | 版本 / 说明 |
-|------|------|-------------|
-| 后端框架 | Spring Boot | 3.4.3 |
-| 语言 | Java | 21 |
-| 构建 | Maven | wrapper（`mvnw`） |
-| AI 集成 | Spring AI + DeepSeek | 1.1.0 / `deepseek-v4-pro` |
-| 持久化 | Spring Data JPA + PostgreSQL | VM `192.168.226.131:5432/knowledge_db` |
-| 前端 | Vue 3 + Vite + TypeScript | ^3.5 / ^8.0 |
-| 向量检索（V2） | pgvector | V1 暂不启用，使用关键词搜索 |
+| 层级 | 技术 |
+|------|------|
+| 后端 | Spring Boot 3.4.3 · Java 21 · Spring Data JPA · Spring AI |
+| AI | DeepSeek API（`deepseek-v4-pro`） |
+| 数据库 | PostgreSQL |
+| 前端 | Vue 3 · Vite 8 · TypeScript · Element Plus · Pinia |
+| 富文本 | WangEditor · marked · DOMPurify |
+| 文档处理 | Apache POI（Word）· PDFBox（PDF）· Jsoup（HTML 解析） |
 
-**前端已安装依赖：** vue-router、axios、pinia、element-plus、@wangeditor/editor、marked、dompurify
+---
 
-## 系统架构（V1）
+## 系统架构
 
 ```mermaid
 flowchart TB
-    subgraph frontend [ideaforge_ui]
-        Views[views]
-        ApiLayer[api]
-        Router[router]
+    subgraph frontend ["前端 ideaforge-ui"]
+        Views[页面 Views]
+        API[API 层]
+        Router[路由]
     end
-    subgraph backend [IdeaForge]
-        Controller[controller]
-        Service[service]
-        Repository[repository]
-        Entity[entity]
+    subgraph backend ["后端 IdeaForge"]
+        Controller[Controller]
+        Service[Service]
+        Repository[Repository]
+        Entity[Entity]
     end
-    subgraph external [外部]
-        DS[DeepSeek_API]
-        PG[(PostgreSQL_VM)]
+    subgraph external ["外部依赖"]
+        DS[DeepSeek API]
+        PG[(PostgreSQL)]
     end
     Views --> Router
-    Views --> ApiLayer
-    ApiLayer -->|REST| Controller
+    Views --> API
+    API -->|REST /api| Controller
     Controller --> Service
     Service --> Repository --> Entity --> PG
     Service --> DS
 ```
 
-## 开发规范：按包 / 目录职责管理
+**核心数据流：**
 
-**总则：** 每个包（后端）或目录（前端）有且仅有一种职责。新增代码必须先确定归属，禁止把业务逻辑、API 调用、页面 UI 混写在同一文件里；禁止跨层调用（如 Controller 直接操作 Repository、View 直接写 fetch）。
+1. 用户提交原始文本（或上传文档）
+2. 后端调用 DeepSeek 生成结构化建议（流式或同步）
+3. 用户在前端确认或修改
+4. 确认后写入 `knowledge_items` 表
+5. 通过关键词与类别检索、浏览与管理
 
-### 后端包职责（`com.exam.ideaforge`）
+---
 
-| 包 | 职责 | 允许 | 禁止 |
-|----|------|------|------|
-| `entity` | 数据库表映射 | JPA 注解、字段、关联 | 业务逻辑、HTTP、调用 AI |
-| `repository` | 数据访问 | JpaRepository、@Query | 业务规则、DTO 转换 |
-| `dto` | API 入参 / 出参 | 字段、校验注解 | 业务逻辑、数据库操作 |
-| `service` | 业务逻辑 | 调用 Repository、DeepSeek、事务 | 处理 HTTP 细节 |
-| `controller` | REST 接口 | 参数校验、调用 Service、返回响应 | 业务逻辑、直接访问 DB |
-| `config` | Spring 配置 | CORS、Bean 定义 | 业务逻辑 |
-| `exception` | 异常处理 | 自定义异常、@ControllerAdvice | 业务逻辑 |
+## 项目结构
 
-**依赖方向（单向）：** `controller → service → repository → entity`；`dto` 仅在 controller 与 service 边界使用，不进入 repository。
+```
+IdeaForge-v/
+├── README.md              # 项目总览（本文件）
+├── .env.example           # 环境变量模板
+├── db/
+│   └── public.sql         # 数据库结构与种子数据参考
+├── IdeaForge/             # 后端（Spring Boot）
+│   ├── README.md
+│   └── src/main/java/com/exam/ideaforge/
+└── ideaforge-ui/          # 前端（Vue 3 + Vite）
+    ├── README.md
+    └── src/
+```
 
-### 前端目录职责（`ideaforge-ui/src`）
-
-| 目录 / 文件 | 职责 | 允许 | 禁止 |
-|-------------|------|------|------|
-| `views/` | 页面级组件（对应路由） | 布局、组合 components、调用 api | 直接写 axios/fetch、复杂可复用 UI |
-| `components/` | 可复用 UI 组件 | 展示、事件 emit | 直接调用后端 API |
-| `router/` | 路由定义 | path、component 映射 | 业务逻辑、API 调用 |
-| `api/` | 后端 HTTP 封装 | axios 请求、URL 常量 | DOM 操作、页面状态 |
-| `stores/` | 全局状态（Pinia） | 低频字典数据缓存、跨页面共享 | 页面 UI、直接 DOM |
-| `assets/` | 静态资源 | css、图片、字体 | JS 逻辑 |
-| `App.vue` | 根布局壳 | 导航栏、`<router-view>` | 具体页面业务 |
-| `main.ts` | 应用入口 | createApp、插件注册 | 业务代码 |
-| `types/` | API 类型定义 | interface、与后端 DTO 对齐 | 业务逻辑、HTTP 调用 |
-
-**依赖方向（单向）：** `views → components + api`；`api` 不依赖 `views` / `components`。
-
-### 跨模块约定
-
-- API 路径统一前缀 `/api`；前后端字段命名保持一致（camelCase）
-- 后端改 DTO 字段时，同步修改前端 `api/` 与 `views/`；前端不假设未实现的接口
-- 可复用逻辑：后端放 `service`，前端放 `components/` 或 `api/`，不随意新建平行包 / 目录
-
-## 协作与开发注意事项
-
-### 文件变更
-
-- **不得擅自新增或删除文件 / 目录**；任何新包、新目录、删文件须先经评审确认
-- 新增文件必须能对应上文职责表中的某一类；若无法归类，先讨论再建
-- 优先在已有文件中扩展，而非重复造轮子
-
-### 模块隔离
-
-- 修改某一包 / 目录时，**不得破坏其他模块已有功能与逻辑**
-- 后端各包之间、前后端之间通过明确接口（DTO / REST）通信
-
-### 全局视角
-
-- 开发前先查现有代码，**能复用则复用**（如同一 Service 处理保存与搜索的数据组装）
-- 避免「每个功能新建一个 Controller / Service / View」；先评估是否扩展现有类
-- 配置集中管理：后端 `application.yml`，前端 `vite.config.js`（proxy 等）
-- 密钥、密码仅通过环境变量注入，**禁止提交到 Git**
-
-### 已知问题
-
-- JPA `ddl-auto` 已改为 `validate`（VM 表由 DBA 维护，应用用户无 ALTER 权限）
-- `status` 字段数据库存储小写（`pending` / `confirmed` / `deleted`），通过 `ItemStatusConverter` 映射
-- **知识条目软删除**：须执行 [`db/migrate_soft_delete.sql`](db/migrate_soft_delete.sql) 扩展 status CHECK 约束，否则软删除写入失败
-- **Logo 静态资源**：已优化为 `logo.webp`（导航，约 0.4 KB）+ `public/favicon.png`（约 1.6 KB）；源图备份于 `ideaforge-ui/scripts/logo-source.png`，再生成请执行 `cd ideaforge-ui && npm run optimize:logo`
-- 类别改由 PostgreSQL 表 `idea_categories` 维护，前端「类别管理」页可增改删（软删除）；**部署前须在 VM 执行** [`db/migrate_idea_categories.sql`](db/migrate_idea_categories.sql)（或参考 `public.sql`），否则应用启动 validate 失败
-- **排版正文字段**：须执行 [`db/migrate_final_content.sql`](db/migrate_final_content.sql) 添加 `suggested_content` / `final_content` 列
-- 类别 `code` 创建后不可修改；软删除（`enabled=false`）后管理页不再显示，历史条目保留；后期可在 DB 手动 `DELETE` 硬删
-- 类别筛选：浏览页**左侧类别导航**（全部 + 各类别）；关键词搜索框不再匹配类别
-- 文档上传：扫描版 PDF 无法提取文字；单文件上限 10MB
-- 浏览页搜索支持分页（默认每页 20 条，最大 100 条）；URL 参数 `page`（0-based）可分享当前页
-- 标签搜索依赖 `final_tags` 正确入库；旧数据若 `final_tags` 为 NULL，需重新保存或手动补数据
+---
 
 ## 环境要求
 
-- JDK 21
-- Maven（或使用 `IdeaForge/mvnw`）
-- Node.js ^20.19.0 或 >=22.12.0（前端）
-- VM 上 PostgreSQL 可远程访问
-- DeepSeek API Key（环境变量）
+| 依赖 | 版本 |
+|------|------|
+| JDK | 21 |
+| Maven | 3.x（或使用项目自带的 `mvnw`） |
+| Node.js | ^20.19.0 或 >= 22.12.0 |
+| PostgreSQL | 14+（建议安装 [pgvector](https://github.com/pgvector/pgvector) 扩展，V2 语义搜索预留） |
+| DeepSeek API Key | [申请地址](https://platform.deepseek.com/) |
+
+---
 
 ## 快速开始
 
-### 1. 配置环境变量
+### 1. 克隆仓库
 
-复制 [`.env.example`](.env.example) 为 `.env` 并填入真实值（`.env` 已 gitignore，不会提交），或手动设置：
-
-```powershell
-$env:DEEPSEEK_API_KEY = "sk-你的密钥"
-$env:DB_PASSWORD = "root"   # 若数据库密码不同则修改
+```bash
+git clone <repository-url>
+cd IdeaForge-v
 ```
 
-### 2. 确认数据库连通
+### 2. 初始化数据库
 
-从开发机测试 VM PostgreSQL：`192.168.226.131:5432/knowledge_db`
+在 PostgreSQL 中创建数据库，并执行 [`db/public.sql`](db/public.sql) 中的表结构定义（或参考该文件自行建表）。
 
-**首次部署类别字典化版本时**，请 DBA 在 VM 执行：
+默认包含两张核心表：
 
-```sql
--- 见 db/migrate_idea_categories.sql
+- `knowledge_items` — 知识条目
+- `idea_categories` — 类别字典（预置 WORK / STUDY / LIFE / INSPIRATION / TODO）
+
+### 3. 配置环境变量
+
+复制环境变量模板并填入真实值：
+
+```bash
+cp .env.example .env
 ```
 
-### 3. 启动后端
+| 变量 | 说明 |
+|------|------|
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥（必填） |
+| `DB_PASSWORD` | PostgreSQL 密码 |
 
-```powershell
+也可在启动前直接导出：
+
+```bash
+# Linux / macOS
+export DEEPSEEK_API_KEY="sk-your-key"
+export DB_PASSWORD="your-password"
+
+# Windows PowerShell
+$env:DEEPSEEK_API_KEY = "sk-your-key"
+$env:DB_PASSWORD = "your-password"
+```
+
+> 数据库连接地址与用户名在 [`IdeaForge/src/main/resources/application.yml`](IdeaForge/src/main/resources/application.yml) 中配置，部署时请按实际环境修改 `spring.datasource.url` 与 `username`。
+
+### 4. 启动后端
+
+```bash
 cd IdeaForge
-.\mvnw.cmd spring-boot:run
+./mvnw spring-boot:run        # Linux / macOS
+# 或
+.\mvnw.cmd spring-boot:run    # Windows
 ```
 
-后端地址：`http://localhost:8080`
+后端默认监听 `http://localhost:8080`。健康检查：`GET /api/health`。
 
-### 4. 启动前端
+### 5. 启动前端
 
-```powershell
+```bash
 cd ideaforge-ui
 npm install
 npm run dev
 ```
 
-前端地址：`http://localhost:5173`
+前端默认监听 `http://localhost:5173`。开发模式下，`/api` 请求通过 Vite 代理转发至后端。
 
-## 开发阶段建议
+---
 
-按模块、按层次推进，不跳层：
+## 页面与路由
 
-1. **后端：** `entity` → `repository` → `dto` → `service` → `controller`
-2. **前端：** `api/` → `router/` + `views/` → `components/`
-3. **联调与验收**
+| 路由 | 功能 |
+|------|------|
+| `/` | 首页：快速入口与最近知识 |
+| `/create` | 录入：文本输入 / 文档上传 → AI 整理 → 保存 |
+| `/browse` | 浏览：类别筛选 + 关键词搜索 + 分页列表 |
+| `/ideas/:id` | 详情：查看、编辑、导出 Word、软删除 |
+| `/settings/categories` | 设置：类别字典管理 |
 
-## V1 功能范围
+---
 
-| 功能 | V1 / V1.5 | V2（规划） |
-|------|-----------|-----------|
-| AI 整理 | DeepSeek `deepseek-v4-pro` | 同左，可优化 Prompt |
-| 数据持久化 | PostgreSQL + JPA | 同左 |
-| 搜索 | 关键词匹配（LIKE）+ 类别侧栏 | pgvector 语义搜索 |
-| 类别管理 | DB 字典 + 前端 CRUD | 同左 |
-| 文档导入 | `.docx` / `.pdf` 文本提取 | 可扩展 OCR |
-| Word 导出 | 单条详情导出排版 `.docx` | 批量导出 |
-| 详情编辑 | PUT 更新最终字段 | 同左 |
-| 正文排版 | WangEditor 富文本（HTML 存储，兼容历史 Markdown） | 可扩展更多格式 |
-| Embedding 模型 | 不需要 | 需额外接入 |
+## API 概览
+
+完整接口说明见 [IdeaForge/README.md](IdeaForge/README.md)。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/ideas/process/stream` | SSE 流式 AI 整理（推荐） |
+| `POST` | `/api/ideas/process` | 同步 AI 整理 |
+| `POST` | `/api/ideas` | 确认保存 |
+| `GET` | `/api/ideas/search` | 关键词 + 类别 + 分页搜索 |
+| `GET` | `/api/ideas/{id}` | 获取详情 |
+| `PUT` | `/api/ideas/{id}` | 更新条目 |
+| `DELETE` | `/api/ideas/{id}` | 软删除 |
+| `POST` | `/api/ideas/parse-document` | 文档解析（`.docx` / `.pdf`） |
+| `GET` | `/api/ideas/{id}/export/docx` | 导出 Word |
+| `GET/POST/PUT/DELETE` | `/api/categories` | 类别字典 CRUD |
+
+---
+
+## 配置说明
+
+### 后端
+
+配置文件：[`IdeaForge/src/main/resources/application.yml`](IdeaForge/src/main/resources/application.yml)
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `server.port` | `8080` | 服务端口 |
+| `spring.datasource.url` | — | PostgreSQL 连接地址 |
+| `spring.datasource.password` | `${DB_PASSWORD}` | 数据库密码 |
+| `spring.jpa.hibernate.ddl-auto` | `validate` | 表结构由 SQL 脚本维护 |
+| `spring.ai.deepseek.chat.options.model` | `deepseek-v4-pro` | AI 模型 |
+| `spring.servlet.multipart.max-file-size` | `10MB` | 文档上传大小限制 |
+
+### 前端
+
+开发代理配置：[`ideaforge-ui/vite.config.ts`](ideaforge-ui/vite.config.ts)
+
+```ts
+server: {
+  proxy: {
+    '/api': 'http://localhost:8080',
+  },
+}
+```
+
+生产部署时，需将前端构建产物与后端同域部署，或通过反向代理统一 `/api` 路径。
+
+---
+
+## 开发指南
+
+### 后端分层
+
+```
+controller → service → repository → entity
+```
+
+- `entity` — JPA 实体映射
+- `repository` — 数据访问
+- `dto` — API 请求 / 响应对象
+- `service` — 业务逻辑
+- `controller` — REST 端点
+- `config` / `exception` — 配置与全局异常处理
+
+### 前端分层
+
+```
+views → components + api + stores
+```
+
+- `views/` — 页面级组件
+- `components/` — 可复用 UI
+- `api/` — HTTP 封装
+- `stores/` — Pinia 全局状态
+- `types/` — TypeScript 类型定义
+
+### 常用命令
+
+```bash
+# 后端测试
+cd IdeaForge && ./mvnw test
+
+# 前端类型检查
+cd ideaforge-ui && npm run typecheck
+
+# 前端生产构建
+cd ideaforge-ui && npm run build
+```
+
+---
+
+## 已知限制
+
+- 搜索基于 SQL `LIKE` 关键词匹配，不支持语义相似度检索（V2 规划 pgvector）
+- 扫描版 PDF 无法提取文字，仅支持可选中文字的 PDF
+- 文档上传单文件上限 10 MB
+- 类别 `code` 创建后不可修改；软删除后历史条目仍保留原类别引用
+- JPA `ddl-auto=validate`，数据库结构变更须通过 SQL 脚本执行，应用本身不自动建表
+
+---
+
+## 路线图
+
+| 版本 | 状态 | 内容 |
+|------|------|------|
+| **V1** | 已发布 | AI 整理、持久化、关键词搜索、文档导入导出、类别管理、富文本 |
+| **V2** | 规划中 | pgvector 语义搜索、Embedding 生成、Prompt 优化、批量导出 |
+
+---
 
 ## 相关文档
 
-- [IdeaForge/README.md](IdeaForge/README.md) — 后端包细则、配置、API 规划
-- [ideaforge-ui/README.md](ideaforge-ui/README.md) — 前端目录细则、对接约定
+- [IdeaForge/README.md](IdeaForge/README.md) — 后端 API 与包结构
+- [ideaforge-ui/README.md](ideaforge-ui/README.md) — 前端目录与对接约定
 - [db/public.sql](db/public.sql) — 数据库参考脚本
-- [db/migrate_idea_categories.sql](db/migrate_idea_categories.sql) — 类别字典表迁移
+
+---
+
+## 参与贡献
+
+欢迎提交 Issue 与 Pull Request。贡献前请：
+
+1. 阅读本 README 及子模块文档，了解项目结构与分层约定
+2. 确保后端 `./mvnw test` 与前端 `npm run typecheck` 通过
+3. 勿将 API 密钥、数据库密码等敏感信息提交至仓库
+
+---
+
+## 致谢
+
+- [DeepSeek](https://www.deepseek.com/) — 大语言模型能力
+- [Spring AI](https://spring.io/projects/spring-ai) — AI 集成框架
+- [Vue.js](https://vuejs.org/) · [Element Plus](https://element-plus.org/) — 前端技术栈

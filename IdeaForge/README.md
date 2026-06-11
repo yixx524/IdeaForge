@@ -1,44 +1,51 @@
-# IdeaForge 后端
+# IdeaForge Backend
 
-Spring Boot 后端模块，负责 REST API、DeepSeek AI 整理、PostgreSQL 持久化与关键词搜索。
+Spring Boot 后端服务，提供 REST API、DeepSeek AI 整理、PostgreSQL 持久化、文档解析与 Word 导出。
 
-全局开发规范见 [项目根 README](../README.md)。
+项目总览见 [根目录 README](../README.md)。
+
+---
 
 ## 技术信息
 
 | 项 | 值 |
 |----|-----|
 | 框架 | Spring Boot 3.4.3 |
-| Java | 21 |
+| 语言 | Java 21 |
 | 包名 | `com.exam.ideaforge` |
-| 端口 | 8080 |
+| 默认端口 | 8080 |
 | AI 模型 | `deepseek-v4-pro`（Spring AI 1.1.0） |
+| 构建工具 | Maven（`./mvnw`） |
+
+---
 
 ## 包结构
 
 ```
 src/main/java/com/exam/ideaforge/
-├── IdeaForgeApplication.java    # 启动类
-├── entity/                      # KnowledgeItem、IdeaCategoryEntity、ItemStatus
-├── repository/                  # KnowledgeItemRepository、IdeaCategoryRepository
-├── dto/                         # 请求 / 响应 DTO
-├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService、DocumentParseService、IdeaExportService、HtmlLayoutFormatter
-├── controller/                  # HealthController、IdeaController、CategoryController
-├── config/                      # WebConfig（CORS）
-└── exception/                   # GlobalExceptionHandler
+├── IdeaForgeApplication.java       # 启动类
+├── entity/                         # JPA 实体
+│   ├── KnowledgeItem.java          #   知识条目
+│   ├── IdeaCategoryEntity.java     #   类别字典
+│   └── ItemStatus.java             #   状态枚举
+├── repository/                     # 数据访问层
+├── dto/                            # 请求 / 响应 DTO
+├── service/                        # 业务逻辑
+│   ├── IdeaProcessService.java     #   AI 整理（同步 + SSE 流式）
+│   ├── IdeaService.java            #   保存、更新、软删除
+│   ├── IdeaSearchService.java      #   关键词搜索与分页
+│   ├── CategoryService.java        #   类别字典（含 Spring Cache）
+│   ├── DocumentParseService.java   #   Word / PDF 文本提取
+│   ├── IdeaExportService.java      #   Word 导出
+│   ├── HtmlLayoutFormatter.java    #   HTML 排版格式化
+│   └── TextLayoutFormatter.java    #   纯文本排版格式化
+├── controller/                     # REST 控制器
+│   ├── IdeaController.java
+│   ├── CategoryController.java
+│   └── HealthController.java
+├── config/                         # Spring 配置（CORS 等）
+└── exception/                      # 全局异常处理
 ```
-
-## 各包职责与开发规则
-
-| 包 | 职责 | 新增代码示例 |
-|----|------|-------------|
-| `entity` | JPA 实体，映射数据库表 | `Idea.java`、`Category.java` |
-| `repository` | 数据访问接口 | `IdeaRepository.java` |
-| `dto` | 请求 / 响应对象 | `IdeaProcessRequest`、`IdeaResponse` |
-| `service` | 业务逻辑 | `IdeaProcessService`（AI 整理）、`IdeaService`（保存）、`IdeaSearchService`（搜索） |
-| `controller` | REST 端点 | `IdeaController.java` |
-| `config` | 全局配置 Bean | `WebConfig.java`（CORS） |
-| `exception` | 统一异常响应 | `GlobalExceptionHandler.java` |
 
 ### 依赖规则
 
@@ -48,114 +55,192 @@ controller → service → repository → entity
               dto（仅在 controller ↔ service 边界传递）
 ```
 
-**禁止：**
+| 包 | 职责 |
+|----|------|
+| `entity` | 数据库表映射，仅含 JPA 注解与字段 |
+| `repository` | `JpaRepository` 与 `@Query`，不含业务逻辑 |
+| `dto` | API 入参 / 出参，含校验注解 |
+| `service` | 业务逻辑、事务、AI 调用 |
+| `controller` | 参数校验、调用 Service、返回 HTTP 响应 |
+| `config` | Bean 定义、CORS 等全局配置 |
+| `exception` | 自定义异常与 `@ControllerAdvice` |
 
-- Controller 直接注入 Repository 或 Entity
-- Service 处理 HTTP 状态码、Request 对象
-- Entity 中包含 API 字段校验或 AI 调用
-- Repository 中包含业务判断逻辑
+---
 
-**新增接口时：**
+## 配置
 
-1. 在 `dto/` 定义 Request / Response
-2. 在 `service/` 实现业务逻辑
-3. 在 `controller/` 添加端点，只做校验与转发
-4. 若需新表或字段，先改 `entity/`，再改 `repository/`
+配置文件：[`src/main/resources/application.yml`](src/main/resources/application.yml)
 
-## 配置说明
+```yaml
+server:
+  port: 8080
 
-配置文件：`src/main/resources/application.yml`
-
-| 配置项 | 说明 |
-|--------|------|
-| `server.port` | 8080 |
-| `spring.datasource.url` | PostgreSQL 连接（VM `192.168.226.131:5432/knowledge_db`） |
-| `spring.datasource.password` | `${DB_PASSWORD:root}` |
-| `spring.jpa.hibernate.ddl-auto` | `validate`（表由 VM 维护，应用无 ALTER 权限） |
-| `spring.ai.deepseek.api-key` | `${DEEPSEEK_API_KEY}`（须通过环境变量注入） |
-| `spring.ai.deepseek.chat.options.model` | `deepseek-v4-pro` |
-| `spring.ai.deepseek.chat.options.temperature` | `0.3` |
-
-> **安全提醒：** 当前配置中 API Key 存在默认值，应移除默认值，仅保留 `${DEEPSEEK_API_KEY}`。
-
-### 环境变量
-
-```powershell
-$env:DEEPSEEK_API_KEY = "sk-..."
-$env:DB_PASSWORD = "root"
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/knowledge_db
+    username: your_username
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        options:
+          model: deepseek-v4-pro
+          temperature: 0.3
+  servlet:
+    multipart:
+      max-file-size: 10MB
 ```
+
+| 环境变量 | 说明 |
+|----------|------|
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥（必填） |
+| `DB_PASSWORD` | PostgreSQL 密码 |
+
+---
 
 ## 启动
 
-```powershell
-cd IdeaForge
-.\mvnw.cmd spring-boot:run
+```bash
+./mvnw spring-boot:run        # Linux / macOS
+.\mvnw.cmd spring-boot:run    # Windows
 ```
 
-验证：应用启动无报错，端口 8080 监听。
+验证：
 
-## V1 API 规划
+```bash
+curl http://localhost:8080/api/health
+```
 
-| 方法 | 路径 | 说明 | 状态 |
-|------|------|------|------|
-| POST | `/api/ideas/process` | 接收原始文本，调用 DeepSeek 整理，返回建议字段（不落库） | 已完成（同步，保留兼容） |
-| POST | `/api/ideas/process/stream` | SSE 流式 AI 整理，推送 partial / delta / complete 事件 | 已完成 |
-| POST | `/api/ideas` | 接收用户确认后的完整信息，持久化 | 已完成 |
-| GET | `/api/ideas/search?q=&category=&page=&size=` | 关键词搜索 + 类别筛选（分页）；无参数时返回最近条目，默认 page=0、size=20 | 已完成 |
-| GET | `/api/ideas/{id}` | 查看单条详情 | 已完成 |
-| PUT | `/api/ideas/{id}` | 更新最终标题/摘要/标签/类别/排版正文；可选携带 suggested 字段（AI 重新整理后） | 已完成 |
-| DELETE | `/api/ideas/{id}` | 软删除（status=deleted，浏览不可见） | 已完成 |
-| POST | `/api/ideas/parse-document` | 上传 `.docx`/`.pdf`，提取文本（multipart `file`） | 已完成 |
-| GET | `/api/ideas/{id}/export/docx` | 导出单条为 Word 文档（排版分段） | 已完成 |
+---
 
-`GET /api/ideas/search` 响应体为 `IdeaSearchPageResponse`：`content`（条目数组）、`page`、`size`、`totalElements`、`totalPages`、`hasNext`、`hasPrevious`。
+## 数据模型
 
-### 类别字典 API
+### knowledge_items
 
-| 方法 | 路径 | 说明 | 状态 |
-|------|------|------|------|
-| GET | `/api/categories` | 列出未删除类别；`?all=true` 含已软删除 | 已完成 |
-| POST | `/api/categories` | 新增 `{ code, label, sortOrder? }` | 已完成 |
-| PUT | `/api/categories/{id}` | 更新 label / sortOrder / enabled | 已完成 |
-| DELETE | `/api/categories/{id}` | 软删除（enabled=false） | 已完成 |
+知识条目主表，字段分为三组：
 
-### 两阶段流程
+| 分组 | 字段 | 说明 |
+|------|------|------|
+| 原始输入 | `original_title`, `original_content` | 用户提交的原始内容 |
+| AI 建议 | `suggested_title`, `suggested_summary`, `suggested_tags`, `suggested_category`, `suggested_content` | AI 整理结果 |
+| 用户确认 | `final_title`, `final_summary`, `final_tags`, `final_category`, `final_content` | 检索与展示使用的最终数据 |
 
-1. `POST /api/ideas/process/stream`（推荐）或 `POST /api/ideas/process` — AI 推理，结果返回前端，暂不入库
-2. 用户在前端编辑确认
-3. `POST /api/ideas` — 一次性保存至 PostgreSQL
+状态字段 `status`：`pending` → `confirmed` → `deleted`（软删除）。
+
+### idea_categories
+
+类别字典表：`code`（稳定标识）+ `label`（展示名）+ `enabled`（是否启用）。
+
+AI Prompt 动态读取 enabled 类别列表；保存条目时 `final_category` 必须是有效的 enabled code。
+
+---
+
+## API 参考
+
+### 知识条目
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/ideas/process` | AI 整理（同步，兼容保留） |
+| `POST` | `/api/ideas/process/stream` | AI 整理（SSE 流式，推荐） |
+| `POST` | `/api/ideas` | 确认保存 |
+| `GET` | `/api/ideas/search` | 搜索与浏览列表 |
+| `GET` | `/api/ideas/{id}` | 获取详情 |
+| `PUT` | `/api/ideas/{id}` | 更新条目 |
+| `DELETE` | `/api/ideas/{id}` | 软删除 |
+| `POST` | `/api/ideas/parse-document` | 文档解析（`multipart/form-data`，字段名 `file`） |
+| `GET` | `/api/ideas/{id}/export/docx` | 导出 Word |
+
+#### 搜索参数
+
+```
+GET /api/ideas/search?q=关键词&category=WORK&page=0&size=20
+```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `q` | string | — | 关键词（匹配标题 / 摘要 / 正文 / 标签） |
+| `category` | string | — | 类别 code 筛选 |
+| `page` | int | `0` | 页码（0-based） |
+| `size` | int | `20` | 每页条数（最大 100） |
+
+响应体 `IdeaSearchPageResponse`：
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0,
+  "hasNext": false,
+  "hasPrevious": false
+}
+```
+
+#### SSE 流式整理
+
+`POST /api/ideas/process/stream` 返回 `text/event-stream`，事件类型：
+
+| 事件 | 说明 |
+|------|------|
+| `partial` | 阶段性完整快照 |
+| `delta` | 增量更新（主要用于 `suggestedContent` 打字机效果） |
+| `complete` | 整理完成，携带完整 `IdeaProcessResponse` |
+| `error` | 错误信息 |
 
 ### 类别字典
 
-想法类别存储于 `idea_categories` 表（`code` + `label` + `enabled`），不再使用 Java 枚举。AI Prompt 动态读取 enabled 类别列表。保存想法时 `finalCategory` 必须是 enabled 的 code。
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/categories` | 列出启用类别 |
+| `GET` | `/api/categories?all=true` | 含已软删除类别 |
+| `POST` | `/api/categories` | 新增 `{ code, label, sortOrder? }` |
+| `PUT` | `/api/categories/{id}` | 更新 label / sortOrder / enabled |
+| `DELETE` | `/api/categories/{id}` | 软删除（`enabled=false`） |
 
-种子数据：`WORK` / `STUDY` / `LIFE` / `INSPIRATION` / `TODO`（见 [`db/migrate_idea_categories.sql`](../db/migrate_idea_categories.sql)）
+### 两阶段流程
 
-## 开发顺序建议
+```
+1. POST /api/ideas/process/stream   → AI 推理，返回建议字段（不落库）
+2. 用户在前端审阅编辑
+3. POST /api/ideas                  → 确认后持久化
+```
 
-1. `entity/` + `repository/` — 数据模型
-2. `dto/` — 接口契约
-3. `service/IdeaProcessService` — DeepSeek 整理
-4. `service/IdeaService` + `service/IdeaSearchService` — 保存与搜索
-5. `controller/IdeaController` — 暴露 REST
-6. `config/` + `exception/` — 横切关注点
+---
 
-## Maven 依赖要点
+## Maven 依赖
 
-- `spring-boot-starter-web` — REST
-- `spring-boot-starter-data-jpa` — 持久化
-- `spring-boot-starter-validation` — 参数校验
-- `spring-boot-starter-cache` + `caffeine` — 类别字典内存缓存（`CategoryService.list`）
-- `spring-ai-starter-model-deepseek` — DeepSeek 集成
-- `postgresql` — 数据库驱动
-- `poi-ooxml` — Word 读写（文档解析与导出）
-- `pdfbox` — PDF 文本提取
-- `jsoup` — HTML 正文解析（Word 导出）
+| 依赖 | 用途 |
+|------|------|
+| `spring-boot-starter-web` | REST API |
+| `spring-boot-starter-data-jpa` | 持久化 |
+| `spring-boot-starter-validation` | 参数校验 |
+| `spring-boot-starter-cache` + `caffeine` | 类别字典缓存 |
+| `spring-ai-starter-model-deepseek` | DeepSeek 集成 |
+| `postgresql` | 数据库驱动 |
+| `poi-ooxml` | Word 读写 |
+| `pdfbox` | PDF 文本提取 |
+| `jsoup` | HTML 解析（Word 导出） |
 
-> pgvector 相关依赖已在 V1 移除，语义搜索留待 V2 再引入。
+---
+
+## 测试
+
+```bash
+./mvnw test
+```
+
+测试覆盖包括：格式化器、文档解析、搜索服务、导出服务等核心模块。
+
+---
 
 ## 相关文档
 
-- [项目根 README](../README.md) — 全局规范、架构、协作注意事项
-- [ideaforge-ui/README.md](../ideaforge-ui/README.md) — 前端对接说明
-- [db/public.sql](../db/public.sql) — 数据库参考
+- [项目根 README](../README.md) — 总览、快速开始、架构
+- [前端 README](../ideaforge-ui/README.md) — 前端对接约定
+- [db/public.sql](../db/public.sql) — 数据库参考脚本
