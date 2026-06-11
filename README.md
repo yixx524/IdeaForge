@@ -26,7 +26,7 @@
 4. **文档上传** — 录入页支持 `.docx` / `.pdf`，解析后填入表单再走 AI 整理
 5. **Word 导出** — 详情页一键下载结构化 `.docx`
 6. **详情编辑** — 详情页可编辑标题、摘要、标签、类别、排版正文
-7. **AI 正文排版** — AI 整理时输出排版后的 `final_content`（`##` 标题、`-` 列表、空行分段）
+7. **富文本正文** — AI 整理输出 Markdown，前端 WangEditor 转 HTML 存储；详情页富文本查看与编辑
 
 **V1 核心流程：**
 
@@ -52,7 +52,7 @@
 | V1.5 文档上传 | 已完成（`.docx` / `.pdf` 解析 → 录入页填充 → AI 整理） |
 | V1.5 Word 导出 | 已完成（详情页导出 `.docx`，排版分段） |
 | V1.6 详情编辑 | 已完成（PUT 更新最终字段） |
-| V1.6 AI 正文排版 | 已完成（`final_content` + 轻量 Markdown） |
+| V1.6 AI 正文排版 | 已完成（`final_content` 富文本 HTML，WangEditor） |
 | 标签/类别搜索 | 已修复（关键词与类别分离；类别用侧栏筛选） |
 | 类别字典化 | 已完成（`idea_categories` 表 + CRUD API + 前端类别管理页） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
@@ -86,7 +86,7 @@ IdeaForge-v/
 | 前端 | Vue 3 + Vite | ^3.5 / ^8.0（JavaScript） |
 | 向量检索（V2） | pgvector | V1 暂不启用，使用关键词搜索 |
 
-**前端已安装依赖：** vue-router、axios
+**前端已安装依赖：** vue-router、axios、@wangeditor/editor、marked、dompurify
 
 **前端规划依赖（待安装，新增须评审）：** Element Plus
 
@@ -255,7 +255,7 @@ npm run dev
 | 文档导入 | `.docx` / `.pdf` 文本提取 | 可扩展 OCR |
 | Word 导出 | 单条详情导出排版 `.docx` | 批量导出 |
 | 详情编辑 | PUT 更新最终字段 | 同左 |
-| 正文排版 | AI 生成 + 轻量 Markdown 存储 | 富文本编辑器 |
+| 正文排版 | WangEditor 富文本（HTML 存储，兼容历史 Markdown） | 可扩展更多格式 |
 | Embedding 模型 | 不需要 | 需额外接入 |
 
 ## 相关文档

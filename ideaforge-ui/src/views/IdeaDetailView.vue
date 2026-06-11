@@ -69,7 +69,7 @@
 
         <section class="detail-section">
           <h3>正文</h3>
-          <FormattedContent :content="displayContent" />
+          <RichTextContent :content="displayContent" />
         </section>
 
         <details class="detail-section original-block">
@@ -110,10 +110,10 @@
           </select>
         </label>
 
-        <label class="field">
+        <label class="field field-rich">
           <span class="field-label">排版正文</span>
-          <textarea v-model="editForm.content" rows="14" />
-          <span class="field-hint">空行分段；## 小节标题；- 列表项</span>
+          <RichTextEditor v-model="editForm.content" min-height="360px" />
+          <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
         </label>
       </article>
     </template>
@@ -133,7 +133,9 @@ import { getIdeaById, exportIdeaDocx, updateIdea } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { categoryLabel, toCategoryOptions } from '@/constants/categories'
 import CategoryBadge from '@/components/CategoryBadge.vue'
-import FormattedContent from '@/components/FormattedContent.vue'
+import RichTextContent from '@/components/RichTextContent.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
+import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
 
 const route = useRoute()
 
@@ -181,7 +183,7 @@ function fillEditForm(data) {
   editForm.summary = data.finalSummary ?? ''
   editForm.tagsText = (data.finalTags ?? []).join('，')
   editForm.category = data.finalCategory ?? ''
-  editForm.content = data.finalContent || data.originalContent || ''
+  editForm.content = toEditorHtml(data.finalContent || data.originalContent || '')
 }
 
 async function loadDetail() {
@@ -238,7 +240,9 @@ async function handleSave() {
       finalSummary: editForm.summary.trim() || null,
       finalTags: parseTags(editForm.tagsText),
       finalCategory: editForm.category,
-      finalContent: editForm.content.trim(),
+      finalContent: isEmptyHtml(editForm.content)
+        ? null
+        : editForm.content.trim(),
     })
     editing.value = false
     message.value = '保存成功'

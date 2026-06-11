@@ -20,11 +20,11 @@ public class IdeaProcessService {
             你是个人知识整理助手。根据用户提供的原始想法，生成结构化建议。
             类别必须是以下 code 之一：%s。
             标签 3-5 个，简洁中文。摘要一句话，不超过 80 字。标题简洁有力。
-            同时输出 suggestedContent：对原始正文做排版整理，使用轻量 Markdown：
-            - 空行分段
-            - 小节标题用 ## 开头
+            同时输出 suggestedContent：对原始正文做排版整理，使用结构清晰的 Markdown：
+            - 空行分段，小节标题与列表层次分明
             - 列表项用 - 开头
             - 修正多余空行与乱码空格，不删改原意，保持内容完整
+            - 前端会将 Markdown 转为富文本展示，无需输出 HTML
             """;
 
     private final ChatClient chatClient;

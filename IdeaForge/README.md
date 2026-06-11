@@ -22,7 +22,7 @@ src/main/java/com/exam/ideaforge/
 ├── entity/                      # KnowledgeItem、IdeaCategoryEntity、ItemStatus
 ├── repository/                  # KnowledgeItemRepository、IdeaCategoryRepository
 ├── dto/                         # 请求 / 响应 DTO
-├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService、DocumentParseService、IdeaExportService
+├── service/                     # IdeaProcessService、IdeaService、IdeaSearchService、CategoryService、DocumentParseService、IdeaExportService、HtmlLayoutFormatter
 ├── controller/                  # HealthController、IdeaController、CategoryController
 ├── config/                      # WebConfig（CORS）
 └── exception/                   # GlobalExceptionHandler
@@ -145,6 +145,7 @@ cd IdeaForge
 - `postgresql` — 数据库驱动
 - `poi-ooxml` — Word 读写（文档解析与导出）
 - `pdfbox` — PDF 文本提取
+- `jsoup` — HTML 正文解析（Word 导出）
 
 > pgvector 相关依赖已在 V1 移除，语义搜索留待 V2 再引入。
 

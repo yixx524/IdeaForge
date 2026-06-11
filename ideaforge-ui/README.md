@@ -13,6 +13,7 @@ Vue 3 + Vite 前端模块，提供首页、想法录入、浏览搜索、详情�
 | 语言 | JavaScript（非 TypeScript） |
 | 路由 | vue-router |
 | HTTP | axios |
+| 富文本 | @wangeditor/editor、marked、dompurify |
 | 路径别名 | `@` → `src/` |
 | 开发端口 | 5173（Vite 默认） |
 
@@ -37,12 +38,15 @@ ideaforge-ui/
     ├── router/              # 路由定义
     ├── views/               # 页面级组件
     ├── constants/           # 共享常量
+    ├── utils/               # 可复用工具（contentHtml 等）
     └── components/          # 可复用 UI 组件
         ├── AppCard.vue
         ├── CategoryBadge.vue
         ├── CategorySidebar.vue
         ├── FileUploadZone.vue
-        └── IdeaResultCard.vue
+        ├── IdeaResultCard.vue
+        ├── RichTextEditor.vue
+        └── RichTextContent.vue
 ```
 
 ### 页面

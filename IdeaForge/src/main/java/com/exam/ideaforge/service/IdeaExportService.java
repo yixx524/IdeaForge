@@ -75,7 +75,7 @@ public class IdeaExportService {
     }
 
     private void addFormattedText(XWPFDocument document, String text) {
-        List<TextLayoutFormatter.TextBlock> blocks = TextLayoutFormatter.parse(text);
+        List<TextLayoutFormatter.TextBlock> blocks = resolveBlocks(text);
         if (blocks.isEmpty()) {
             addBodyParagraph(document, "（无）", false, 0);
             return;
@@ -88,6 +88,19 @@ public class IdeaExportService {
                 case PARAGRAPH -> addBodyParagraph(document, block.text(), false, 0);
             }
         }
+    }
+
+    private List<TextLayoutFormatter.TextBlock> resolveBlocks(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        if (HtmlLayoutFormatter.isHtmlContent(text)) {
+            List<TextLayoutFormatter.TextBlock> htmlBlocks = HtmlLayoutFormatter.parse(text);
+            if (!htmlBlocks.isEmpty()) {
+                return htmlBlocks;
+            }
+        }
+        return TextLayoutFormatter.parse(text);
     }
 
     private void addTitle(XWPFDocument document, String text) {

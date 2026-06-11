@@ -35,9 +35,10 @@ public final class TextLayoutFormatter {
                 continue;
             }
 
-            if (trimmed.startsWith("## ")) {
+            String headingText = parseHeading(trimmed);
+            if (headingText != null) {
                 flushParagraph(blocks, paragraph);
-                blocks.add(new TextBlock(BlockType.HEADING2, trimmed.substring(3).trim()));
+                blocks.add(new TextBlock(BlockType.HEADING2, headingText));
                 continue;
             }
 
@@ -55,6 +56,20 @@ public final class TextLayoutFormatter {
 
         flushParagraph(blocks, paragraph);
         return blocks;
+    }
+
+    /** 识别 ## / ### 标题；须先匹配 ###，避免被 ## 前缀截断 */
+    private static String parseHeading(String line) {
+        if (line.startsWith("### ")) {
+            return line.substring(4).trim();
+        }
+        if (line.startsWith("## ")) {
+            return line.substring(3).trim();
+        }
+        if (line.length() > 3 && line.startsWith("###") && !Character.isWhitespace(line.charAt(3))) {
+            return line.substring(3).trim();
+        }
+        return null;
     }
 
     private static void flushParagraph(List<TextBlock> blocks, StringBuilder paragraph) {

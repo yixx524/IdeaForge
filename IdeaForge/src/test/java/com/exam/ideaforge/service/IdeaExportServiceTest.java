@@ -29,6 +29,29 @@ class IdeaExportServiceTest {
     private IdeaExportService exportService;
 
     @Test
+    void exportDocx_withHtmlContent_returnsDocxBytes() {
+        UUID id = UUID.randomUUID();
+        IdeaResponse idea = IdeaResponse.builder()
+                .id(id)
+                .finalTitle("HTML导出")
+                .finalSummary("摘要")
+                .finalTags(List.of("标签"))
+                .finalCategory("WORK")
+                .finalContent("<h3>小节</h3><ul><li>列表项</li></ul><p>段落文字</p>")
+                .originalContent("正文")
+                .createdAt(OffsetDateTime.parse("2026-06-11T10:00:00+08:00"))
+                .build();
+
+        when(ideaService.findById(id)).thenReturn(idea);
+        when(categoryRepository.findByCode("WORK")).thenReturn(Optional.empty());
+
+        IdeaExportService.ExportResult result = exportService.exportDocx(id);
+
+        assertThat(result.content()).isNotEmpty();
+        assertThat(result.content()[0]).isEqualTo((byte) 'P');
+    }
+
+    @Test
     void exportDocx_returnsDocxBytesAndFilename() {
         UUID id = UUID.randomUUID();
         IdeaResponse idea = IdeaResponse.builder()

@@ -35,6 +35,31 @@ class TextLayoutFormatterTest {
     }
 
     @Test
+    void parse_heading3() {
+        String text = """
+                ### 区块链的特点是什么？
+                - 去中心化
+                - 不可篡改
+
+                ## 补充说明
+                段落文字。
+                """;
+
+        List<TextLayoutFormatter.TextBlock> blocks = TextLayoutFormatter.parse(text);
+
+        assertThat(blocks).extracting(TextLayoutFormatter.TextBlock::type)
+                .containsExactly(
+                        TextLayoutFormatter.BlockType.HEADING2,
+                        TextLayoutFormatter.BlockType.LIST_ITEM,
+                        TextLayoutFormatter.BlockType.LIST_ITEM,
+                        TextLayoutFormatter.BlockType.HEADING2,
+                        TextLayoutFormatter.BlockType.PARAGRAPH
+                );
+        assertThat(blocks.get(0).text()).isEqualTo("区块链的特点是什么？");
+        assertThat(blocks.get(3).text()).isEqualTo("补充说明");
+    }
+
+    @Test
     void parse_blankReturnsEmpty() {
         assertThat(TextLayoutFormatter.parse(null)).isEmpty();
         assertThat(TextLayoutFormatter.parse("   ")).isEmpty();

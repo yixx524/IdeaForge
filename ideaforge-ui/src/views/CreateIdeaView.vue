@@ -92,14 +92,10 @@
         </select>
       </label>
 
-      <label class="field">
+      <label class="field field-rich">
         <span class="label">排版正文</span>
-        <textarea
-          v-model="finalForm.content"
-          rows="12"
-          placeholder="AI 排版后的正文，支持 ## 标题与 - 列表"
-        />
-        <span class="field-hint">空行分段；## 小节标题；- 列表项</span>
+        <RichTextEditor v-model="finalForm.content" min-height="320px" />
+        <span class="field-hint">支持标题、加粗、列表等富文本格式</span>
       </label>
 
       <div class="card-footer actions">
@@ -128,6 +124,8 @@ import { parseDocument, processIdea, saveIdea } from '@/api/idea'
 import { listCategories } from '@/api/category'
 import { toCategoryOptions } from '@/constants/categories'
 import FileUploadZone from '@/components/FileUploadZone.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
+import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
 
 /** 当前步骤：input 录入 | review 确认 */
 const step = ref('input')
@@ -237,7 +235,7 @@ async function handleProcess() {
     finalForm.summary = result.suggestedSummary ?? ''
     finalForm.tagsText = (result.suggestedTags ?? []).join('，')
     finalForm.category = result.suggestedCategory ?? finalForm.category ?? categories.value[0]?.value ?? ''
-    finalForm.content = result.suggestedContent ?? original.content.trim()
+    finalForm.content = toEditorHtml(result.suggestedContent ?? original.content.trim())
     step.value = 'review'
   } catch (e) {
     error.value = e.message
@@ -270,7 +268,9 @@ async function handleSave() {
       finalSummary: finalForm.summary.trim() || null,
       finalTags: parseTags(finalForm.tagsText),
       finalCategory: finalForm.category,
-      finalContent: finalForm.content.trim() || original.content.trim(),
+      finalContent: isEmptyHtml(finalForm.content)
+        ? toEditorHtml(original.content.trim())
+        : finalForm.content.trim(),
     })
 
     success.value = `已保存：${saved.finalTitle}`
