@@ -102,8 +102,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { searchIdeas, deleteIdea } from '@/api/idea'
-import { listCategories } from '@/api/category'
-import { categoryLabel, toCategoryOptions } from '@/constants/categories'
+import { useCategoryStore } from '@/stores/category'
 import IdeaResultCard from '@/components/IdeaResultCard.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 
@@ -111,6 +110,7 @@ const PAGE_SIZE = 20
 
 const route = useRoute()
 const router = useRouter()
+const categoryStore = useCategoryStore()
 
 const keyword = ref('')
 const loading = ref(false)
@@ -119,7 +119,6 @@ const error = ref(null)
 const success = ref(null)
 const results = ref([])
 const loaded = ref(false)
-const allCategories = ref([])
 const deleteTarget = ref(null)
 const currentPage = ref(0)
 const totalElements = ref(0)
@@ -130,7 +129,7 @@ const hasPrevious = ref(false)
 const activeCategoryLabel = computed(() => {
   const code = route.query.category
   if (!code) return ''
-  return categoryLabel(code, allCategories.value)
+  return categoryStore.labelOf(code)
 })
 
 watch(
@@ -142,19 +141,8 @@ watch(
   { immediate: true },
 )
 
-async function loadCategories() {
-  try {
-    const all = await listCategories({ all: true })
-    allCategories.value = toCategoryOptions(all)
-  } catch {
-    allCategories.value = []
-  }
-}
-
-loadCategories()
-
 function resolveLabel(code) {
-  return categoryLabel(code, allCategories.value)
+  return categoryStore.labelOf(code)
 }
 
 function parsePage(query) {

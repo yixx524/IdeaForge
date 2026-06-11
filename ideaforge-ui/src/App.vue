@@ -43,12 +43,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import CategorySidebar from '@/components/CategorySidebar.vue'
+import { useCategoryStore } from '@/stores/category'
 import logoUrl from '@/assets/logo.png'
 
 const route = useRoute()
+const categoryStore = useCategoryStore()
+
+onMounted(() => {
+  categoryStore.ensureLoaded()
+})
 
 /** 浏览页与详情页将显示左侧类别导航（Phase 2 接入 CategorySidebar） */
 const showSidebar = computed(() => {

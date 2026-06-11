@@ -126,14 +126,16 @@
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { parseDocument, processIdeaStream, saveIdea, applyProcessResult } from '@/api/idea'
-import { listCategories } from '@/api/category'
-import { toCategoryOptions } from '@/constants/categories'
+import { useCategoryStore } from '@/stores/category'
+import { storeToRefs } from 'pinia'
 import FileUploadZone from '@/components/FileUploadZone.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
 import { isEmptyHtml, toEditorHtml } from '@/utils/contentHtml'
 
 const router = useRouter()
+const categoryStore = useCategoryStore()
+const { enabledOptions: categories } = storeToRefs(categoryStore)
 
 /** 当前步骤：input 录入 | review 确认 */
 const step = ref('input')
@@ -143,7 +145,6 @@ const streamContent = ref('')
 const parsing = ref(false)
 const error = ref(null)
 const success = ref(null)
-const categories = ref([])
 const uploadedFileName = ref('')
 const uploadedCharCount = ref(0)
 
@@ -206,7 +207,7 @@ function finalizeStreamResult(result) {
 
 onMounted(async () => {
   try {
-    categories.value = toCategoryOptions(await listCategories())
+    await categoryStore.ensureLoaded()
     if (categories.value.length && !finalForm.category) {
       const defaultCat = categories.value.find((c) => c.value === 'INSPIRATION') ?? categories.value[0]
       finalForm.category = defaultCat.value

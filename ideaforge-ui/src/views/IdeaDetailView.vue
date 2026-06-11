@@ -189,8 +189,8 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { getIdeaById, exportIdeaDocx, updateIdea, processIdeaStream, applyProcessResult } from '@/api/idea'
-import { listCategories } from '@/api/category'
-import { categoryLabel, toCategoryOptions } from '@/constants/categories'
+import { storeToRefs } from 'pinia'
+import { useCategoryStore } from '@/stores/category'
 import CategoryBadge from '@/components/CategoryBadge.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
@@ -198,6 +198,8 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import { isEmptyHtml, toEditorHtml, htmlToPlainText } from '@/utils/contentHtml'
 
 const route = useRoute()
+const categoryStore = useCategoryStore()
+const { enabledOptions: enabledCategories } = storeToRefs(categoryStore)
 
 const loading = ref(true)
 const editing = ref(false)
@@ -212,8 +214,6 @@ const error = ref(null)
 const message = ref(null)
 const actionError = ref(null)
 const idea = ref(null)
-const allCategories = ref([])
-const enabledCategories = ref([])
 const hasSuggestion = ref(false)
 
 const editForm = reactive({
@@ -259,7 +259,7 @@ const backTo = computed(() => {
 })
 
 const categoryLabelText = computed(() =>
-  categoryLabel(idea.value?.finalCategory, allCategories.value),
+  categoryStore.labelOf(idea.value?.finalCategory),
 )
 
 const displayContent = computed(() =>
@@ -286,14 +286,11 @@ async function loadDetail() {
   editing.value = false
 
   try {
-    const [data, enabled, all] = await Promise.all([
+    const [data] = await Promise.all([
       getIdeaById(route.params.id),
-      listCategories(),
-      listCategories({ all: true }),
+      categoryStore.ensureLoaded(),
     ])
     idea.value = data
-    enabledCategories.value = toCategoryOptions(enabled)
-    allCategories.value = toCategoryOptions(all)
     fillEditForm(data)
   } catch (e) {
     error.value = e.message

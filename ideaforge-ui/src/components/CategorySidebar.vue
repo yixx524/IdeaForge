@@ -30,26 +30,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { listCategories } from '@/api/category'
+import { useCategoryStore } from '@/stores/category'
 
 const route = useRoute()
 const router = useRouter()
-
-const categories = ref([])
+const categoryStore = useCategoryStore()
+const { enabled: categories } = storeToRefs(categoryStore)
 
 const selectedCategory = computed(() => route.query.category ?? '')
 
 const PALETTE = ['#1d4ed8', '#15803d', '#a21caf', '#c2410c', '#0369a1', '#a16207']
-
-onMounted(async () => {
-  try {
-    categories.value = await listCategories()
-  } catch {
-    categories.value = []
-  }
-})
 
 function dotStyle(code) {
   let hash = 0

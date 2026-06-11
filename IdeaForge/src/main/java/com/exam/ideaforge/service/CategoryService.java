@@ -7,6 +7,8 @@ import com.exam.ideaforge.entity.IdeaCategoryEntity;
 import com.exam.ideaforge.exception.CategoryNotFoundException;
 import com.exam.ideaforge.exception.CategoryValidationException;
 import com.exam.ideaforge.repository.IdeaCategoryRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class CategoryService {
         this.repository = repository;
     }
 
+    @Cacheable(value = "categories", key = "#includeAll")
     @Transactional(readOnly = true)
     public List<CategoryResponse> list(boolean includeAll) {
         List<IdeaCategoryEntity> items = includeAll
@@ -72,6 +75,7 @@ public class CategoryService {
                 .orElseGet(() -> enabled.getFirst().getCode());
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public CategoryResponse create(CategoryRequest request) {
         String code = request.getCode().trim().toUpperCase();
@@ -96,6 +100,7 @@ public class CategoryService {
         return toResponse(repository.save(entity));
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public CategoryResponse update(UUID id, CategoryUpdateRequest request) {
         IdeaCategoryEntity entity = findEntity(id);
@@ -114,6 +119,7 @@ public class CategoryService {
     }
 
     /** 软删除：enabled=false，记录保留供历史条目引用，管理页不再展示 */
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public void softDelete(UUID id) {
         IdeaCategoryEntity entity = findEntity(id);

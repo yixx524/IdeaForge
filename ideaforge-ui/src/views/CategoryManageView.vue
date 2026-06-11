@@ -89,12 +89,15 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { createCategory, deleteCategory, listCategories, updateCategory } from '@/api/category'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { createCategory, deleteCategory, updateCategory } from '@/api/category'
+import { useCategoryStore } from '@/stores/category'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 
-const categories = ref([])
-const loading = ref(false)
+const categoryStore = useCategoryStore()
+const { enabled: categories, loading: storeLoading } = storeToRefs(categoryStore)
+const loading = computed(() => storeLoading.value)
 const saving = ref(false)
 const error = ref(null)
 const success = ref(null)
@@ -112,19 +115,14 @@ const editForm = reactive({
   sortOrder: 0,
 })
 
-async function loadCategories() {
-  loading.value = true
+onMounted(async () => {
   error.value = null
   try {
-    categories.value = await listCategories()
+    await categoryStore.ensureLoaded()
   } catch (e) {
     error.value = e.message
-  } finally {
-    loading.value = false
   }
-}
-
-onMounted(loadCategories)
+})
 
 async function handleCreate() {
   if (!newCategory.code.trim() || !newCategory.label.trim()) {
@@ -146,7 +144,7 @@ async function handleCreate() {
     newCategory.code = ''
     newCategory.label = ''
     newCategory.sortOrder = 0
-    await loadCategories()
+    await categoryStore.refresh()
   } catch (e) {
     error.value = e.message
   } finally {
@@ -176,7 +174,7 @@ async function handleUpdate(id) {
     })
     success.value = '类别已更新'
     editingId.value = null
-    await loadCategories()
+    await categoryStore.refresh()
   } catch (e) {
     error.value = e.message
   } finally {
@@ -205,7 +203,7 @@ async function confirmDelete() {
     await deleteCategory(id)
     success.value = `已删除：${label}`
     deleteTarget.value = null
-    await loadCategories()
+    await categoryStore.refresh()
   } catch (e) {
     error.value = e.message
   } finally {
