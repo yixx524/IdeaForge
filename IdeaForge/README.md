@@ -145,6 +145,7 @@ cd IdeaForge
 - `spring-boot-starter-web` — REST
 - `spring-boot-starter-data-jpa` — 持久化
 - `spring-boot-starter-validation` — 参数校验
+- `spring-boot-starter-cache` + `caffeine` — 类别字典内存缓存（`CategoryService.list`）
 - `spring-ai-starter-model-deepseek` — DeepSeek 集成
 - `postgresql` — 数据库驱动
 - `poi-ooxml` — Word 读写（文档解析与导出）

@@ -13,6 +13,7 @@ Vue 3 + Vite 前端模块，提供首页、想法录入、浏览搜索、详情�
 | 语言 | JavaScript（非 TypeScript） |
 | 路由 | vue-router |
 | HTTP | axios |
+| 状态管理 | pinia |
 | 富文本 | @wangeditor/editor、marked、dompurify |
 | 路径别名 | `@` → `src/` |
 | 开发端口 | 5173（Vite 默认） |
@@ -27,9 +28,11 @@ ideaforge-ui/
 ├── vite.config.js
 ├── package.json
 └── src/
-    ├── main.js              # 应用入口（注册 router）
+    ├── main.js              # 应用入口（注册 router、pinia）
     ├── App.vue              # 根布局壳（导航 + 侧栏 + router-view）
     ├── assets/              # 静态资源（css、图片）
+    ├── stores/              # Pinia 全局状态
+    │   └── category.js      # 类别字典缓存（ensureLoaded / refresh）
     ├── api/                 # 后端 HTTP 封装
     │   ├── http.js          # axios 实例
     │   ├── health.js        # 健康检查
@@ -67,6 +70,7 @@ ideaforge-ui/
 | `components/` | 可复用 UI | 展示、事件 emit | 调用后端 API |
 | `router/` | 路由 | path 与 component 映射 | 业务逻辑 |
 | `api/` | HTTP 封装 | axios 请求、URL 常量 | DOM 操作 |
+| `stores/` | 全局状态 | 低频字典缓存、跨页面共享 | 页面 UI、直接请求后端 |
 | `assets/` | 静态资源 | css、图片 | JS 逻辑 |
 | `App.vue` | 根布局 | 导航、侧栏、`<router-view>` | 页面业务 |
 | `main.js` | 入口 | createApp、插件注册 | 业务代码 |
@@ -129,6 +133,12 @@ server: {
 | `listCategories()` | `GET /api/categories` | enabled 类别 |
 | `listCategories({ all: true })` | `GET /api/categories?all=true` | 含已软删除 |
 | CRUD in `category.js` | `/api/categories` | 类别管理 |
+
+### 类别字典缓存
+
+- 应用启动时 `App.vue` 调用 `categoryStore.ensureLoaded()`，并行拉取 enabled + all 两份列表，会话内各页面共享，避免重复 HTTP
+- 类别管理页 CRUD 成功后调用 `categoryStore.refresh()`；后端 `CategoryService.list` 使用 `@Cacheable`，写操作 `@CacheEvict` 清空
+- 新增依赖后须执行 `npm install` 再启动 `npm run dev`
 
 ## 相关文档
 

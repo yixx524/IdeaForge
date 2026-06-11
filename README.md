@@ -59,6 +59,7 @@
 | 搜索分页 | 已完成（`GET /api/ideas/search?page=&size=`，BrowseView 分页器） |
 | 编辑页 AI 重新整理 | 已完成（原始正文 / 当前排版正文双来源，保存同步 suggested 字段） |
 | AI 流式整理 (SSE) | 已完成（`POST /api/ideas/process/stream`，前端打字机预览 suggestedContent） |
+| 类别字典缓存 | 已完成（后端 `CategoryService` Spring Cache + 前端 Pinia `categoryStore` 会话内共享） |
 | 向量语义搜索 | V2 规划（V1 使用关键词搜索） |
 
 ## 项目结构
@@ -91,7 +92,7 @@ IdeaForge-v/
 | 前端 | Vue 3 + Vite | ^3.5 / ^8.0（JavaScript） |
 | 向量检索（V2） | pgvector | V1 暂不启用，使用关键词搜索 |
 
-**前端已安装依赖：** vue-router、axios、@wangeditor/editor、marked、dompurify
+**前端已安装依赖：** vue-router、axios、pinia、@wangeditor/editor、marked、dompurify
 
 **前端规划依赖（待安装，新增须评审）：** Element Plus
 
@@ -148,6 +149,7 @@ flowchart TB
 | `components/` | 可复用 UI 组件 | 展示、事件 emit | 直接调用后端 API |
 | `router/` | 路由定义 | path、component 映射 | 业务逻辑、API 调用 |
 | `api/` | 后端 HTTP 封装 | axios 请求、URL 常量 | DOM 操作、页面状态 |
+| `stores/` | 全局状态（Pinia） | 低频字典数据缓存、跨页面共享 | 页面 UI、直接 DOM |
 | `assets/` | 静态资源 | css、图片、字体 | JS 逻辑 |
 | `App.vue` | 根布局壳 | 导航栏、`<router-view>` | 具体页面业务 |
 | `main.js` | 应用入口 | createApp、插件注册 | 业务代码 |
