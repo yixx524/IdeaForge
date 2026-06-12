@@ -12,6 +12,7 @@ import com.exam.ideaforge.service.IdeaExportService;
 import com.exam.ideaforge.service.IdeaProcessService;
 import com.exam.ideaforge.service.IdeaSearchService;
 import com.exam.ideaforge.service.IdeaService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -70,7 +71,11 @@ public class IdeaController {
 
     /** 阶段一：AI 整理 SSE 流式推送，推荐前端使用 */
     @PostMapping(value = "/process/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter processStream(@Valid @RequestBody IdeaProcessRequest request) {
+    public SseEmitter processStream(
+            @Valid @RequestBody IdeaProcessRequest request,
+            HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache, no-transform");
         return processService.streamProcess(request);
     }
 

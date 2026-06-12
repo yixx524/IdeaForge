@@ -155,7 +155,7 @@ import {
   getIdeaById,
   exportIdeaDocx,
   updateIdea,
-  processIdeaStream,
+  processIdeaWithFallback,
   applyProcessResult,
 } from '@/api/idea'
 import { useCategoryStore } from '@/stores/category'
@@ -362,7 +362,7 @@ async function handleReprocess() {
   reprocessStreamContent.value = ''
 
   try {
-    await processIdeaStream(
+    await processIdeaWithFallback(
       payload,
       {
         onPartial: applyReprocessPartial,

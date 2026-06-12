@@ -116,6 +116,7 @@ export async function processIdeaStream(
       Accept: 'text/event-stream',
     },
     body: JSON.stringify(payload),
+    credentials: 'same-origin',
     signal: options.signal,
   })
 
@@ -139,6 +140,42 @@ export async function processIdea(
 ): Promise<IdeaProcessResponse> {
   const { data } = await http.post<IdeaProcessResponse>('/ideas/process', payload)
   return data
+}
+
+/** Cloudflare Quick Tunnel 对 SSE POST 常返回 403，公网直连同步接口更稳 */
+function prefersSyncProcess(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.location.hostname.endsWith('.trycloudflare.com')
+  )
+}
+
+/**
+ * 优先 SSE 流式整理；公网隧道等场景流失败时自动降级为同步接口，保证功能可用。
+ */
+export async function processIdeaWithFallback(
+  payload: IdeaProcessRequest,
+  handlers: SseHandlers = {},
+  options: ProcessStreamOptions = {},
+): Promise<void> {
+  if (prefersSyncProcess()) {
+    const result = await processIdea(payload)
+    handlers.onComplete?.(result)
+    return
+  }
+
+  try {
+    await processIdeaStream(payload, handlers, options)
+  } catch (streamError) {
+    if (options.signal?.aborted) {
+      throw streamError
+    }
+    if (streamError instanceof DOMException && streamError.name === 'AbortError') {
+      throw streamError
+    }
+    const result = await processIdea(payload)
+    handlers.onComplete?.(result)
+  }
 }
 
 /** 阶段二：用户确认后保存至数据库 */

@@ -1,0 +1,13 @@
+# 云服务器部署 profile（SPRING_PROFILES_ACTIVE=prod）
+# 数据库在本机 localhost，与本地开发（虚拟机 192.168.x.x）隔离
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/knowledge_db
+    username: yi_ideaforge
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    org.hibernate.SQL: warn

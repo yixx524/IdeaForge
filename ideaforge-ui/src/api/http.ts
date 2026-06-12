@@ -3,6 +3,7 @@ import axios from 'axios'
 /** axios 实例：开发环境由 Vite proxy 将 /api 转发到 localhost:8080 */
 const http = axios.create({
   baseURL: '/api',
+  withCredentials: true,
 })
 
 /** 统一提取后端 ErrorResponse.message，供 views 直接展示 */

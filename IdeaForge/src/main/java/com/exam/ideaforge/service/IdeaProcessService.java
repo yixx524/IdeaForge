@@ -14,6 +14,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +30,9 @@ import java.util.regex.Pattern;
 public class IdeaProcessService {
 
     private static final long SSE_TIMEOUT_MS = 300_000L;
+
+    /** Cloudflare 等代理约 100s 无数据会断连，心跳需低于该阈值 */
+    private static final long SSE_HEARTBEAT_INTERVAL_SEC = 25L;
 
     private static final Pattern STRING_FIELD_PATTERN = Pattern.compile(
             "\"(?<field>suggestedTitle|suggestedSummary|suggestedCategory|suggestedContent)\"\\s*:\\s*\""
@@ -86,6 +93,22 @@ public class IdeaProcessService {
         AtomicReference<AiSuggestionResult> latest = new AtomicReference<>();
         AtomicReference<String> lastContentSent = new AtomicReference<>("");
 
+        ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "sse-heartbeat");
+            thread.setDaemon(true);
+            return thread;
+        });
+        ScheduledFuture<?> heartbeat = heartbeatExecutor.scheduleAtFixedRate(
+                () -> sendHeartbeat(emitter),
+                SSE_HEARTBEAT_INTERVAL_SEC,
+                SSE_HEARTBEAT_INTERVAL_SEC,
+                TimeUnit.SECONDS);
+
+        Runnable stopHeartbeat = () -> {
+            heartbeat.cancel(false);
+            heartbeatExecutor.shutdown();
+        };
+
         Disposable subscription = chatClient.prompt()
                 .system(context.systemPrompt())
                 .user(context.userPrompt())
@@ -93,16 +116,29 @@ public class IdeaProcessService {
                 .content()
                 .subscribe(
                         chunk -> handleStreamChunk(emitter, buffer, latest, lastContentSent, chunk),
-                        error -> completeWithError(emitter, resolveAiErrorMessage(error)),
-                        () -> completeStream(emitter, buffer.toString(), latest.get())
+                        error -> {
+                            stopHeartbeat.run();
+                            completeWithError(emitter, resolveAiErrorMessage(error));
+                        },
+                        () -> {
+                            stopHeartbeat.run();
+                            completeStream(emitter, buffer.toString(), latest.get());
+                        }
                 );
 
-        emitter.onCompletion(subscription::dispose);
+        emitter.onCompletion(() -> {
+            stopHeartbeat.run();
+            subscription.dispose();
+        });
         emitter.onTimeout(() -> {
+            stopHeartbeat.run();
             subscription.dispose();
             completeWithError(emitter, "AI 整理超时，请稍后重试");
         });
-        emitter.onError(ex -> subscription.dispose());
+        emitter.onError(ex -> {
+            stopHeartbeat.run();
+            subscription.dispose();
+        });
 
         return emitter;
     }
@@ -317,6 +353,14 @@ public class IdeaProcessService {
                 .suggestedCategory(trimToNull(result.suggestedCategory()))
                 .suggestedContent(trimToNull(result.suggestedContent()))
                 .build();
+    }
+
+    private void sendHeartbeat(SseEmitter emitter) {
+        try {
+            emitter.send(SseEmitter.event().comment("ping"));
+        } catch (IOException ex) {
+            emitter.completeWithError(ex);
+        }
     }
 
     private void sendEvent(SseEmitter emitter, String eventName, Object data) {

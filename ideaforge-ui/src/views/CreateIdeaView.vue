@@ -128,7 +128,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { UploadFile } from 'element-plus'
-import { parseDocument, processIdeaStream, saveIdea, applyProcessResult } from '@/api/idea'
+import { parseDocument, processIdeaWithFallback, saveIdea, applyProcessResult } from '@/api/idea'
 import { useCategoryStore } from '@/stores/category'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import RichTextContent from '@/components/RichTextContent.vue'
@@ -279,7 +279,7 @@ async function handleProcess() {
   }
 
   try {
-    await processIdeaStream(
+    await processIdeaWithFallback(
       payload,
       {
         onPartial: applyStreamPartial,
